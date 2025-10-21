@@ -10,6 +10,34 @@ Get FlightBridge landing page & dashboard live in 10 minutes!
 
 ---
 
+## ⚠️ CRITICAL ISSUE FOUND (Oct 21, 2025)
+
+### OAuth Flow Status: ✅ WORKING (via n8n direct) / ❌ BROKEN (via Cloudflare)
+
+**Issue Discovered:**
+- ✅ OAuth works perfectly: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
+- ❌ OAuth fails with 500 error: `https://flightbridge.app/webhook/oauth/start`
+
+**Root Cause:** Cloudflare Worker at `flightbridge.app` is NOT properly proxying `/webhook/*` requests to n8n.
+
+**Evidence:**
+1. Test with real FCView passkey via n8n direct URL → ✅ Success
+   - Authorization code received: `38113060c5785f61663785d5b9e3c8c5`
+   - Access token obtained: `d2aa1e3124c91acbd34f9569d8c29e5daa6fbbb595b5b4a0d307dd680623c7b8`
+   - Refresh token obtained: `46a0d766bbccf402c5131be751b38d356158a1d998d41e46b1959816f4f572dd`
+
+2. Same passkey via Cloudflare domain → ❌ Internal Server Error (500)
+
+**Next Action:** Fix Cloudflare Worker configuration in dashboard to properly proxy all `/webhook/*` paths to n8n.
+
+**FCView OAuth Configuration:**
+- Client ID: `f0cf9180d491f06e`
+- Redirect URI (registered): `https://flightbridge.app/webhook/oauth/callback`
+- OAuth endpoints working correctly
+- Token exchange functioning properly
+
+---
+
 ## Step 1: Deploy Landing Page (5 minutes)
 
 ### Option A: Manual Setup (Recommended for learning)
@@ -73,36 +101,62 @@ return [{ json: { html } }];
 
 ---
 
-## Step 3: Configure Cloudflare Worker (3 minutes)
+## Step 3: Configure Cloudflare Worker (3 minutes) ⚠️ NEEDS FIX
 
-### Update Worker to Route Root Domain
+### Current Issue
+The Cloudflare Worker is NOT properly proxying `/webhook/*` requests, causing OAuth to fail.
+
+### Required Cloudflare Worker Code
+
+**Deploy this in Cloudflare Dashboard → Workers & Pages:**
 
 ```javascript
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     
-    // Route root to landing page
-    if (url.pathname === '/' || url.pathname === '') {
-      url.pathname = '/webhook/home';
+    // Proxy ALL /webhook/* paths to n8n
+    if (url.pathname.startsWith('/webhook/')) {
+      const n8nUrl = `https://kbarbershop.app.n8n.cloud${url.pathname}${url.search}`;
+      
+      return fetch(n8nUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.method !== 'GET' && request.method !== 'HEAD' 
+          ? await request.text() 
+          : undefined
+      });
     }
     
-    // Proxy to n8n
-    url.hostname = 'kbarbershop.app.n8n.cloud';
+    // Route root to landing page
+    if (url.pathname === '/' || url.pathname === '') {
+      return fetch('https://kbarbershop.app.n8n.cloud/webhook/home');
+    }
     
-    const modifiedRequest = new Request(url.toString(), {
-      method: request.method,
-      headers: request.headers,
-      body: request.body,
-      redirect: 'follow'
-    });
+    // Serve static pages
+    if (url.pathname === '/login') {
+      return fetch('https://raw.githubusercontent.com/flightbridge/flightbridge/main/login-page.html');
+    }
     
-    return await fetch(modifiedRequest);
+    if (url.pathname === '/dashboard') {
+      return fetch('https://kbarbershop.app.n8n.cloud/webhook/dashboard');
+    }
+    
+    return new Response('Not Found', { status: 404 });
   }
-}
+};
 ```
 
-**Test URL**: https://flightbridge.app/
+**Critical:** This must properly proxy POST requests for OAuth to work.
+
+### Deployment Steps:
+1. Go to Cloudflare Dashboard → Workers & Pages
+2. Edit existing worker or create new one
+3. Paste code above
+4. Deploy
+5. Add route: `flightbridge.app/*` → Your worker
+
+**Test URL After Fix**: https://flightbridge.app/webhook/oauth/start
 
 ---
 
@@ -112,13 +166,14 @@ export default {
 
 ✅ **Landing Page**: https://flightbridge.app/  
 ✅ **Dashboard**: https://flightbridge.app/webhook/dashboard ✅ **NEW!**  
-✅ **Privacy Policy**: https://flightbridge.app/webhook/privacy  
-✅ **Terms of Service**: https://flightbridge.app/webhook/terms  
+⚠️ **OAuth Start**: https://flightbridge.app/webhook/oauth/start (BROKEN - needs Cloudflare fix)
+✅ **OAuth Start (direct)**: https://kbarbershop.app.n8n.cloud/webhook/oauth/start (WORKS!)
 
 ### Test Checklist:
 
 - [ ] Landing page loads with styling
 - [ ] Dashboard displays flight cards with sample data
+- [ ] **OAuth flow works via Cloudflare (currently broken)**
 - [ ] Mobile responsive (test on phone)
 - [ ] All links work (Privacy, Terms, Contact)
 - [ ] "Join Waitlist" button opens email client
@@ -127,52 +182,74 @@ export default {
 
 ---
 
+## OAuth Integration Status
+
+### ✅ Working Components:
+- FCView OAuth authorization page loads correctly
+- Passkey validation working (tested with real user passkey)
+- Authorization code exchange successful
+- Access token and refresh token obtained
+- Tokens stored in Supabase (with minor duplicate key issue to fix)
+
+### ❌ Broken Components:
+- Cloudflare Worker not proxying OAuth requests properly
+- `flightbridge.app/webhook/oauth/start` returns 500 error
+- POST requests to OAuth endpoints failing through Cloudflare
+
+### 🔧 Current Workaround:
+**Use n8n direct URLs for OAuth testing:**
+- OAuth Start: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
+- OAuth Callback: `https://kbarbershop.app.n8n.cloud/webhook/oauth/callback`
+
+### 📋 Next Steps:
+1. **PRIORITY:** Fix Cloudflare Worker to proxy `/webhook/*` correctly
+2. Minor: Update Supabase node to use UPSERT instead of INSERT (avoid duplicate key errors)
+3. Test complete OAuth flow through `flightbridge.app` domain
+4. Build dashboard to fetch and display user's real flights
+
+---
+
 ## Step 5: Next Actions
 
 ### Immediate (Today):
 
-1. **Email FCView for API Approval**
-   ```
-   To: support@flightcrewview.com
-   Subject: Indie Tier API Access - Privacy Policy & Terms Completed
-   
-   Hi FCView Team,
-   
-   I've completed the required Privacy Policy and Terms of Service:
-   - Privacy: https://flightbridge.app/webhook/privacy
-   - Terms: https://flightbridge.app/webhook/terms
-   
-   FlightBridge syncs Flight Crew View to LogTen Pro with timezone corrections.
-   
-   Ready for Indie tier approval.
-   
-   Thank you!
-   Byungchan Lim
-   ```
+1. **Fix Cloudflare Worker** (TOP PRIORITY)
+   - Update worker code to properly proxy `/webhook/*` paths
+   - Test OAuth flow through `flightbridge.app` domain
+   - Verify POST requests work correctly
 
-2. **Share Landing Page & Dashboard**
-   - Test with friends/colleagues
-   - Get feedback on design
-   - Validate value proposition
+2. **Test OAuth Flow End-to-End**
+   - Generate fresh passkey in FCView mobile app
+   - Complete authorization via `flightbridge.app/webhook/oauth/start`
+   - Verify tokens saved in Supabase
+   - Confirm no duplicate key errors
 
 ### This Week:
 
-- [ ] Monitor FCView API approval (2-5 business days)
-- [ ] Set up Google Analytics (optional)
-- [ ] Create social media accounts (optional)
-- [ ] Prepare OAuth workflows (after API approval)
+- [ ] Complete OAuth integration through production domain
+- [ ] Fix Supabase duplicate key constraint
+- [ ] Build workflow to fetch flights from FCView API
+- [ ] Connect dashboard to real flight data
+- [ ] Test timezone correction logic
 
 ### This Month:
 
-- [ ] Build OAuth integration
-- [x] ~~Develop user dashboard~~ ✅ **COMPLETE**
-- [ ] Connect dashboard to live data
 - [ ] Set up Stripe payments
+- [ ] Build LogTen Pro URL generation
+- [ ] Test complete sync flow: FCView → Dashboard → LogTen Pro
 - [ ] Launch beta to first users
 
 ---
 
 ## Troubleshooting
+
+### OAuth 500 Error at flightbridge.app?
+
+**Cause:** Cloudflare Worker not proxying correctly
+
+**Fix:** Update Cloudflare Worker code (see Step 3 above)
+
+**Workaround:** Use n8n direct URL: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
 
 ### Landing Page Not Loading?
 
@@ -202,13 +279,6 @@ export default {
 - No HTML escaping in Code node
 - Browser cache (hard refresh: Cmd+Shift+R)
 
-### Email Link Not Working?
-
-**Update in landing-page.html:**
-```html
-<a href="mailto:support@flightbridge.app?subject=Waitlist">Join Waitlist</a>
-```
-
 ---
 
 ## Dashboard Features ✅
@@ -222,7 +292,8 @@ export default {
 - ✅ Mobile-responsive design
 - ✅ Professional styling matching landing page
 
-### Pending Features (After API Approval):
+### Pending Features (After Cloudflare Fix):
+- ⏳ OAuth flow through production domain
 - ⏳ Live flight data from FCView API
 - ⏳ User authentication
 - ⏳ Working import to LogTen Pro functionality
@@ -231,35 +302,22 @@ export default {
 
 ---
 
-## Pro Tips
+## Current Status (Oct 21, 2025)
 
-### Performance:
-- Landing page is static HTML = ultra fast
-- Dashboard uses minimal JavaScript = fast loading
-- Served via CDN = global speed
+**✅ WORKING:**
+- Landing page deployed
+- Dashboard UI deployed
+- OAuth flow functional (via n8n direct URL)
+- FCView API integration tested and working
+- Token exchange and storage working
 
-### SEO:
-- Meta tags already included
-- Submit to Google Search Console
-- Add structured data (optional)
+**⚠️ ISSUES:**
+- Cloudflare Worker NOT proxying `/webhook/*` correctly
+- OAuth fails when accessed via `flightbridge.app`
+- Minor Supabase duplicate key constraint
 
-### Analytics:
-Add before `</body>`:
-```html
-<!-- Google Analytics (optional) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX');
-</script>
-```
-
-### A/B Testing:
-- Test different headlines
-- Try different CTAs
-- Experiment with pricing display
+**🔧 NEXT ACTION:**
+Fix Cloudflare Worker in dashboard to proxy all webhook requests to n8n.
 
 ---
 
@@ -288,9 +346,9 @@ Add before `</body>`:
 
 **Live URLs:**
 - Landing Page: https://flightbridge.app/
-- Dashboard: https://flightbridge.app/webhook/dashboard ✅ **NEW!**
-- Privacy: https://flightbridge.app/webhook/privacy
-- Terms: https://flightbridge.app/webhook/terms
+- Dashboard: https://flightbridge.app/webhook/dashboard
+- OAuth (broken via CF): https://flightbridge.app/webhook/oauth/start
+- OAuth (working direct): https://kbarbershop.app.n8n.cloud/webhook/oauth/start
 
 **Development:**
 - GitHub Repo: https://github.com/flightbridge/flightbridge
@@ -302,14 +360,5 @@ Add before `</body>`:
 - FCView API Portal: https://flightcrewview2.com/logbook/logbookapiclientportal
 
 ---
-
-**🎉 Congratulations! Your landing page & dashboard are live!**
-
-**Current Status:** 
-- ✅ Landing page deployed
-- ✅ Dashboard UI deployed
-- ⏳ Awaiting FCView API approval
-
-**Next Step**: Email FCView for API approval, then connect dashboard to live data.
 
 **Questions?** Check DEPLOYMENT.md for detailed instructions.
