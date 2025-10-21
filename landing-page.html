@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+// LANDING PAGE - FINAL VERSION
+// No status badge, just Login button in header
+
+const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -283,18 +286,6 @@
             opacity: 1;
         }
 
-        /* Status Badge */
-        .status-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            background: rgba(76, 175, 80, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            font-size: 14px;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .header-content {
@@ -339,7 +330,6 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
-            <div class="status-badge">✅ Now Live</div>
             <h1>Sync Flight Crew View to LogTen Pro</h1>
             <p>Automatically sync your flights with timezone corrections.<br>Built for professional pilots who value accuracy.</p>
             <a href="/webhook/login" class="cta-button">Get Started</a>
@@ -445,4 +435,6 @@
         </div>
     </footer>
 </body>
-</html>
+</html>`;
+
+return [{ json: { html } }];
