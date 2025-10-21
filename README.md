@@ -2,8 +2,9 @@
 
 **Sync Flight Crew View to LogTen Pro with Automatic Timezone Corrections**
 
-🚀 **Status:** Landing page LIVE! Awaiting FCView API approval  
-🌐 **Live:** https://flightbridge.app/
+🚀 **Status:** Dashboard LIVE! Awaiting FCView API approval  
+🌐 **Live:** https://flightbridge.app/  
+📊 **Dashboard:** https://flightbridge.app/webhook/dashboard
 
 ---
 
@@ -51,7 +52,7 @@ An automated sync service that:
 
 ## ✅ What We've Built So Far
 
-### Phase 1: Foundation (COMPLETE)
+### Phase 1: Foundation ✅ **COMPLETE**
 
 #### 1. **Domain & DNS** ✅
 - Purchased `flightbridge.app` from Namecheap ($0.60/month)
@@ -108,7 +109,22 @@ export default {
 - Both pages are FCView API compliance requirements
 - Mobile-responsive, professionally formatted
 
-#### 5. **n8n Workflows (Active)** ✅
+#### 5. **User Dashboard** ✅ **NEW!**
+- **Live at:** https://flightbridge.app/webhook/dashboard
+- Clean, modern interface matching landing page design
+- Flight list display with:
+  - Flight number and route (JFK → MIA)
+  - Date, departure time, duration
+  - Aircraft type and tail number
+  - Status badges (Pending/Imported)
+- Filter buttons (All/Pending/Imported)
+- "Import to LogTen Pro" button for each flight
+- "Sync Now" functionality
+- Mobile-responsive design
+- Empty state messaging
+- **Status:** UI complete, awaiting API integration for live data
+
+#### 6. **n8n Workflows (Active)** ✅
 All workflows hosted on n8n Cloud:
 
 | Workflow | Path | Purpose | Status |
@@ -116,14 +132,15 @@ All workflows hosted on n8n Cloud:
 | Landing Page | `/webhook/home` | Main website | ✅ Active |
 | Privacy Policy | `/webhook/privacy` | Legal compliance | ✅ Active |
 | Terms of Service | `/webhook/terms` | Legal compliance | ✅ Active |
+| **Dashboard** | `/webhook/dashboard` | User flight management | ✅ **Active** |
 | Test Webhook | `/webhook/test` | Development/debugging | ✅ Active |
 
-#### 6. **Database Setup** ✅
+#### 7. **Database Setup** ✅
 Supabase PostgreSQL database with tables:
 - `users` - User accounts, OAuth tokens
 - `flights` - Synced flight data
 
-#### 7. **GitHub Repository** ✅
+#### 8. **GitHub Repository** ✅
 - Complete source code
 - Documentation (README, DEPLOYMENT, QUICKSTART)
 - Version control
@@ -160,7 +177,7 @@ Supabase PostgreSQL database with tables:
 - **URL:** https://kbarbershop.app.n8n.cloud
 - **Dashboard:** https://app.n8n.cloud
 - **Purpose:**
-  - Serve HTML pages (landing, privacy, terms)
+  - Serve HTML pages (landing, privacy, terms, dashboard)
   - Handle webhooks
   - OAuth flow (future)
   - API integrations (future)
@@ -252,6 +269,12 @@ Supabase PostgreSQL database with tables:
 │  │    Webhook → Code (HTML) → Respond                        │  │
 │  │    Path: /webhook/terms                                   │  │
 │  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ 4. Dashboard Workflow ✅ NEW!                             │  │
+│  │    Webhook → Code (HTML) → Respond                        │  │
+│  │    Path: /webhook/dashboard                               │  │
+│  │    Features: Flight list, import buttons, filters         │  │
+│  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
 │  Future Workflows (After API Approval):                          │
 │  • OAuth Start                                                   │
@@ -272,10 +295,10 @@ Supabase PostgreSQL database with tables:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Current Data Flow (Static Pages)
+### Current Data Flow (Static Pages + Dashboard)
 
 ```
-User visits flightbridge.app
+User visits flightbridge.app/webhook/dashboard
   ↓
 Cloudflare DNS resolves to Worker
   ↓
@@ -283,31 +306,37 @@ Worker proxies to n8n Cloud
   ↓
 n8n Webhook receives request
   ↓
-Code node generates HTML
+Code node generates Dashboard HTML
   ↓
 Respond node sends HTML back
   ↓
-User sees rendered page
+User sees flight dashboard with sample data
 ```
 
 ---
 
 ## 🔄 Backend Logic Flow
 
-### Current Implementation (Phase 1)
+### Current Implementation (Phase 1 + Phase 4)
 
-**Landing Page Workflow:**
+**Dashboard Workflow:**
 ```javascript
-// n8n Workflow: FlightBridge Landing Page
-// Workflow ID: iwi36dqpVFL0IKGX
+// n8n Workflow: FlightBridge User Dashboard
+// Path: /webhook/dashboard
 
 1. Webhook Node (Trigger)
    - Type: GET request
-   - Path: /webhook/home
+   - Path: /webhook/dashboard
    - Response mode: Using 'Respond to Webhook' node
    
 2. Code Node (JavaScript)
-   const html = `...full landing page HTML...`;
+   const html = `...full dashboard HTML...`;
+   // Includes:
+   // - Flight list display
+   // - Filter buttons (All/Pending/Imported)
+   // - Import to LogTen buttons
+   // - Sync Now functionality
+   // - Mobile responsive design
    return [{ json: { html } }];
    
 3. Respond to Webhook Node
@@ -316,7 +345,15 @@ User sees rendered page
    - Headers: Content-Type: text/html; charset=utf-8
 ```
 
-**Privacy & Terms Workflows:** Same structure, different HTML content
+**Current Features:**
+- ✅ Professional UI matching landing page theme
+- ✅ Flight card layout with all flight details
+- ✅ Status badges (Pending/Imported)
+- ✅ Filter functionality (client-side)
+- ✅ "Import to LogTen Pro" button placeholders
+- ✅ "Sync Now" button
+- ✅ Empty state messaging
+- ⏳ Awaiting live data integration (after API approval)
 
 ---
 
@@ -387,28 +424,6 @@ For each user in database:
 End loop
 ```
 
-#### Dashboard Logic
-
-**Workflow: User Dashboard**
-```
-User visits dashboard
-  ↓
-Check authentication (session token)
-  ↓
-Fetch user's flights from Supabase
-  ↓
-Generate HTML table with:
-  - Date
-  - Route (ORIGIN → DEST)
-  - Aircraft
-  - Block time
-  - "Import to LogTen" button (with custom URL scheme)
-  ↓
-Display sync status (last sync time, next sync)
-  ↓
-Settings: Enable/disable auto-sync, timezone preferences
-```
-
 ---
 
 ## 🗺️ Development Roadmap
@@ -450,28 +465,36 @@ Settings: Enable/disable auto-sync, timezone preferences
   - CSV format conversion
   - Custom URL scheme
   - Testing with LogTen Pro app
+- [ ] Connect dashboard to live flight data
 
 **Estimated Timeline:** 1-2 weeks of development
 
-### Phase 4: User Dashboard 📋 **PLANNED**
+### Phase 4: User Dashboard ✅ **COMPLETE**
+- [x] Dashboard UI created (n8n HTML workflow) - October 21
+  - [x] Flight history table with status badges
+  - [x] Filter functionality (All/Pending/Imported)
+  - [x] "Import to LogTen Pro" buttons
+  - [x] "Sync Now" button
+  - [x] Mobile-responsive design
+  - [x] Empty state messaging
+  - [x] Professional styling matching landing page
+- [ ] Connect to live data (pending API approval)
 - [ ] User authentication system
-  - Login page
-  - Session management
-  - Protected routes
-- [ ] Dashboard UI (n8n HTML or separate React app)
-  - Flight history table
-  - Sync status display
-  - One-click import buttons
+  - [ ] Login page
+  - [ ] Session management
+  - [ ] Protected routes
 - [ ] Settings page
-  - Auto-sync toggle
-  - Timezone preferences
-  - Account management
+  - [ ] Auto-sync toggle
+  - [ ] Timezone preferences
+  - [ ] Account management
 - [ ] User onboarding flow
-  - Welcome screen
-  - FCView connection wizard
-  - First sync
+  - [ ] Welcome screen
+  - [ ] FCView connection wizard
+  - [ ] First sync
 
-**Estimated Timeline:** 2-3 weeks
+**UI Status:** ✅ Complete  
+**Data Integration:** ⏳ Pending API approval  
+**Estimated Timeline for Auth:** 1-2 weeks after API approval
 
 ### Phase 5: Payments 💰 **PLANNED**
 - [ ] Stripe account setup
@@ -505,7 +528,7 @@ Settings: Enable/disable auto-sync, timezone preferences
 
 ### Monthly Operating Costs
 | Service | Plan | Cost | Purpose |
-|---------|------|------|---------|
+|---------|------|------|------------|
 | n8n Cloud | Creator | $20.00 | Backend workflows & hosting |
 | Supabase | Free | $0.00 | Database (up to 500MB) |
 | Cloudflare | Free | $0.00 | DNS, SSL, Worker |
@@ -546,6 +569,7 @@ Settings: Enable/disable auto-sync, timezone preferences
 
 ### Live URLs
 - **Landing Page:** https://flightbridge.app/
+- **Dashboard:** https://flightbridge.app/webhook/dashboard ✅ **NEW!**
 - **Privacy Policy:** https://flightbridge.app/webhook/privacy
 - **Terms of Service:** https://flightbridge.app/webhook/terms
 
@@ -578,10 +602,12 @@ Settings: Enable/disable auto-sync, timezone preferences
 2. ✅ Legal pages deployed
 3. ✅ Cloudflare Worker configured
 4. ✅ Documentation complete
-5. **🔴 NEXT: Send FCView API approval email**
+5. ✅ **Dashboard UI complete** - October 21
+6. **🔴 NEXT: Send FCView API approval email**
+7. **🔴 THEN: Connect dashboard to live flight data**
 
 ---
 
-**Last Updated:** October 16, 2025, 8:55 AM PST  
-**Current Status:** Landing page LIVE, awaiting FCView API approval  
-**Latest Deployment:** Landing page at https://flightbridge.app/
+**Last Updated:** October 21, 2025, 3:22 PM PST  
+**Current Status:** Dashboard UI LIVE, awaiting FCView API approval  
+**Latest Deployment:** User dashboard at https://flightbridge.app/webhook/dashboard
