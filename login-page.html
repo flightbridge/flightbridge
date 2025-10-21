@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FlightBridge</title>
+    <meta name="description" content="Login to FlightBridge - Sync your Flight Crew View to LogTen Pro">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 50px 40px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+        
+        .login-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        
+        .login-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .login-button-icon {
+            font-size: 1.3em;
+        }
+        
+        .divider {
+            margin: 30px 0;
+            text-align: center;
+            color: #999;
+            position: relative;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #ddd;
+        }
+        
+        .divider::before {
+            left: 0;
+        }
+        
+        .divider::after {
+            right: 0;
+        }
+        
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .back-link:hover {
+            color: #5568d3;
+            text-decoration: underline;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+        
+        .features h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: start;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: #555;
+        }
+        
+        .feature-icon {
+            color: #667eea;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .security-note {
+            margin-top: 30px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #2e7d32;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .security-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 40px 25px;
+            }
+            
+            h1 {
+                font-size: 1.6em;
+            }
+            
+            .subtitle {
+                font-size: 1em;
+            }
+            
+            .login-button {
+                padding: 16px 30px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">✈️</div>
+        <h1>Welcome to FlightBridge</h1>
+        <p class="subtitle">Connect your Flight Crew View account to get started</p>
+        
+        <a href="/webhook/oauth-start" class="login-button">
+            <span class="login-button-icon">🔐</span>
+            <span>Connect with Flight Crew View</span>
+        </a>
+        
+        <div class="features">
+            <h3>What you'll get:</h3>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Automatic sync of your flight schedule</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Timezone corrections for accurate logs</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>One-click import to LogTen Pro</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>14-day free trial, then $9.99/month</span>
+            </div>
+        </div>
+        
+        <div class="security-note">
+            <span class="security-icon">🔒</span>
+            <span>We use secure OAuth authentication. We never see your Flight Crew View password.</span>
+        </div>
+        
+        <div class="divider">or</div>
+        
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+</body>
+</html>
