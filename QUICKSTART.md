@@ -1,6 +1,6 @@
 # 🚀 Quick Start Guide
 
-Get FlightBridge landing page live in 10 minutes!
+Get FlightBridge landing page & dashboard live in 10 minutes!
 
 ## Prerequisites
 
@@ -45,7 +45,35 @@ return [{ json: { html } }];
 
 ---
 
-## Step 2: Configure Cloudflare Worker (3 minutes)
+## Step 2: Deploy Dashboard ✅ (5 minutes)
+
+### Same Process as Landing Page
+
+1. **Create New Workflow**: "FlightBridge Dashboard"
+
+2. **Add 3 Nodes**:
+   - Webhook (GET `/dashboard`)
+   - Code (copy HTML from `dashboard.html`)
+   - Respond to Webhook (Content-Type: `text/html`)
+
+3. **Configure Code Node**:
+```javascript
+const html = `
+<!-- Paste entire dashboard.html content here -->
+`;
+
+return [{ json: { html } }];
+```
+
+4. **Activate Workflow** ✅
+
+**Test URL**: https://kbarbershop.app.n8n.cloud/webhook/dashboard
+
+**Live URL**: https://flightbridge.app/webhook/dashboard
+
+---
+
+## Step 3: Configure Cloudflare Worker (3 minutes)
 
 ### Update Worker to Route Root Domain
 
@@ -78,25 +106,28 @@ export default {
 
 ---
 
-## Step 3: Verify Everything Works (2 minutes)
+## Step 4: Verify Everything Works (2 minutes)
 
 ### Check These URLs:
 
 ✅ **Landing Page**: https://flightbridge.app/  
+✅ **Dashboard**: https://flightbridge.app/webhook/dashboard ✅ **NEW!**  
 ✅ **Privacy Policy**: https://flightbridge.app/webhook/privacy  
 ✅ **Terms of Service**: https://flightbridge.app/webhook/terms  
 
 ### Test Checklist:
 
 - [ ] Landing page loads with styling
+- [ ] Dashboard displays flight cards with sample data
 - [ ] Mobile responsive (test on phone)
 - [ ] All links work (Privacy, Terms, Contact)
 - [ ] "Join Waitlist" button opens email client
+- [ ] Filter buttons work on dashboard
 - [ ] Page loads fast (< 2 seconds)
 
 ---
 
-## Step 4: Next Actions
+## Step 5: Next Actions
 
 ### Immediate (Today):
 
@@ -119,7 +150,7 @@ export default {
    Byungchan Lim
    ```
 
-2. **Share Landing Page**
+2. **Share Landing Page & Dashboard**
    - Test with friends/colleagues
    - Get feedback on design
    - Validate value proposition
@@ -134,7 +165,8 @@ export default {
 ### This Month:
 
 - [ ] Build OAuth integration
-- [ ] Develop user dashboard
+- [x] ~~Develop user dashboard~~ ✅ **COMPLETE**
+- [ ] Connect dashboard to live data
 - [ ] Set up Stripe payments
 - [ ] Launch beta to first users
 
@@ -155,6 +187,14 @@ export default {
 - Check n8n execution logs
 - Verify Cloudflare Worker logs
 
+### Dashboard Not Loading?
+
+**Check:**
+1. n8n workflow is Active
+2. Webhook path is `/dashboard`
+3. Content-Type header is set correctly
+4. HTML is not escaped in Code node
+
 ### Styling Issues?
 
 **Check:**
@@ -171,11 +211,31 @@ export default {
 
 ---
 
+## Dashboard Features ✅
+
+### Current Features (UI Complete):
+- ✅ Flight list with status badges (Pending/Imported)
+- ✅ Filter buttons (All/Pending/Imported)
+- ✅ Flight details (route, date, time, aircraft)
+- ✅ "Import to LogTen Pro" buttons
+- ✅ "Sync Now" button
+- ✅ Mobile-responsive design
+- ✅ Professional styling matching landing page
+
+### Pending Features (After API Approval):
+- ⏳ Live flight data from FCView API
+- ⏳ User authentication
+- ⏳ Working import to LogTen Pro functionality
+- ⏳ Auto-sync capability
+- ⏳ Settings page
+
+---
+
 ## Pro Tips
 
 ### Performance:
 - Landing page is static HTML = ultra fast
-- No JavaScript = works everywhere
+- Dashboard uses minimal JavaScript = fast loading
 - Served via CDN = global speed
 
 ### SEO:
@@ -228,6 +288,7 @@ Add before `</body>`:
 
 **Live URLs:**
 - Landing Page: https://flightbridge.app/
+- Dashboard: https://flightbridge.app/webhook/dashboard ✅ **NEW!**
 - Privacy: https://flightbridge.app/webhook/privacy
 - Terms: https://flightbridge.app/webhook/terms
 
@@ -242,8 +303,13 @@ Add before `</body>`:
 
 ---
 
-**🎉 Congratulations! Your landing page is live!**
+**🎉 Congratulations! Your landing page & dashboard are live!**
 
-**Next Step**: Email FCView for API approval, then wait 2-5 business days.
+**Current Status:** 
+- ✅ Landing page deployed
+- ✅ Dashboard UI deployed
+- ⏳ Awaiting FCView API approval
+
+**Next Step**: Email FCView for API approval, then connect dashboard to live data.
 
 **Questions?** Check DEPLOYMENT.md for detailed instructions.
