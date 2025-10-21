@@ -32,10 +32,33 @@
             backdrop-filter: blur(10px);
         }
 
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .logo {
             font-size: 24px;
             font-weight: bold;
             color: white;
+        }
+
+        .login-btn {
+            display: inline-block;
+            padding: 10px 24px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
         }
 
         /* Hero Section */
@@ -264,15 +287,21 @@
         .status-badge {
             display: inline-block;
             padding: 8px 16px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(76, 175, 80, 0.9);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             font-size: 14px;
             margin-bottom: 20px;
+            font-weight: 600;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
             .hero h1 {
                 font-size: 36px;
             }
@@ -300,17 +329,20 @@
     <!-- Header -->
     <header>
         <div class="container">
-            <div class="logo">✈️ FlightBridge</div>
+            <div class="header-content">
+                <div class="logo">✈️ FlightBridge</div>
+                <a href="/webhook/login" class="login-btn">Login</a>
+            </div>
         </div>
     </header>
 
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
-            <div class="status-badge">🚀 Coming Soon</div>
+            <div class="status-badge">✅ Now Live</div>
             <h1>Sync Flight Crew View to LogTen Pro</h1>
             <p>Automatically sync your flights with timezone corrections.<br>Built for professional pilots who value accuracy.</p>
-            <a href="#pricing" class="cta-button">Join Waitlist</a>
+            <a href="/webhook/login" class="cta-button">Get Started</a>
             <a href="#features" class="cta-button secondary">Learn More</a>
         </div>
     </section>
@@ -395,7 +427,7 @@
                     <li>Email support</li>
                     <li>14-day free trial</li>
                 </ul>
-                <a href="mailto:support@flightbridge.app?subject=Waitlist" class="cta-button">Join Waitlist</a>
+                <a href="/webhook/login" class="cta-button">Get Started</a>
             </div>
         </div>
     </section>
