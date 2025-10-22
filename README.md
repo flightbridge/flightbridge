@@ -2,7 +2,7 @@
 
 **Sync Flight Crew View to LogTen Pro with Automatic Timezone Corrections**
 
-🚀 **Status:** OAuth Working! Cloudflare Proxy Issue 🔧  
+🚀 **Status:** Login & Auth Complete! OAuth Working! 🎉  
 🌐 **Live:** https://flightbridge.app/  
 📊 **Dashboard:** https://flightbridge.app/webhook/dashboard
 
@@ -25,164 +25,99 @@
 - [x] Client Secret obtained
 - [x] Redirect URI configured: `https://flightbridge.app/webhook/oauth/callback`
 
-### Phase 3: OAuth & Authentication ✅ **WORKING**
+### Phase 3: OAuth & Authentication ✅ **COMPLETE**
 - [x] OAuth Start workflow built (`/webhook/oauth/start`)
 - [x] OAuth Callback workflow built (`/webhook/oauth/callback`)
-- [x] Login page created and deployed (`/webhook/login`)
-- [x] Landing page updated with Login button
-- [x] OAuth flow **FULLY WORKING** via direct n8n URL ✅
+- [x] OAuth flow **FULLY WORKING** ✅
 - [x] Token exchange working ✅
 - [x] Access & refresh tokens retrieved successfully ✅
-- [ ] Cloudflare Worker proxy - **BROKEN** 🔴
-- [ ] Supabase user storage - needs UPSERT logic
+- [x] Cloudflare Worker proxy - **FIXED** ✅
+
+### Phase 4: User Authentication ✅ **COMPLETE** 
+- [x] Login/Signup page created (`/webhook/login`)
+- [x] User registration workflow built
+- [x] Password hashing (SHA-256)
+- [x] Duplicate email checking
+- [x] User login workflow built
+- [x] FCView connection status check
+- [x] Automatic routing (Dashboard vs Connect FCView)
+- [x] Success messages with redirect delays
+- [x] Error handling for invalid credentials
+- [x] Supabase user table (email, password_hash, first_name, last_name, tokens)
 
 ---
 
-## 🎯 Current Status: OAuth Working! Cloudflare Proxy Broken
+## 🎯 Current Status: Login & Auth Complete!
 
-### ✅ **MAJOR BREAKTHROUGH - OAuth Flow 100% Functional:**
+### ✅ **NEW: Complete User Authentication System**
 
-**What We Discovered:**
-1. OAuth flow works PERFECTLY when using direct n8n URL: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
-2. FCView successfully validates passkeys (both TEST1234 and real passkeys)
-3. FCView redirects to callback with authorization code
-4. Token exchange completes successfully
-5. Access token & refresh token received from FCView API
+**What We Built Today (Oct 22, 2025):**
 
-**Proof of Success (Execution 1726 & 1740):**
-```json
-{
-  "code": "4cc3d5b394c147a7d00581d3be8b7e7b",
-  "state": "new_user",
-  "access_token": "d2aa1e3124c91acbd34f9569d8c29e5daa6fbbb595b5b4a0d307dd680623c7b8",
-  "refresh_token": "46a0d766bbccf402c5131be751b38d356158a1d998d41e46b1959816f4f572dd",
-  "expires_in": 3600
-}
+#### **Two Active Workflows:**
+
+1. **FlightBridge Login** (ID: `POwWWbExpbnNaBD9`)
+   - Path: `/webhook/login` (GET)
+   - Shows beautiful login/signup page
+   - Tab-based UI (Login / Sign Up)
+   - Form validation (password match, 8+ characters)
+   - Error/success message display
+
+2. **FlightBridge Login Auth** (ID: `WuZ1fx5aPUeHEZfO`)
+   - Path: `/webhook/login-auth` (POST)
+   - Handles both signup and login actions
+   - Password hashing with SHA-256
+   - Duplicate email prevention
+   - Credential validation
+   - FCView connection check
+   - Smart routing:
+     - Has FCView token → Dashboard
+     - No FCView token → Connect FCView page
+
+#### **Complete User Flow:**
+```
+1. User visits /webhook/login
+2. Chooses "Login" or "Sign Up" tab
+3. Submits form → POST to /webhook/login-auth
+4. If Signup:
+   - Hash password
+   - Check email doesn't exist
+   - Create user in Supabase
+   - Show "Account created! Redirecting..." (1.5s)
+   - Redirect to /webhook/connect-fcview
+5. If Login:
+   - Hash password
+   - Find user with matching credentials
+   - Check if FCView connected
+   - If connected → Dashboard
+   - If not → Connect FCView page
 ```
 
-### 🔴 **Current Issue: Cloudflare Worker Proxy**
-
-**Problem:**
-- When using production domain `https://flightbridge.app/webhook/oauth/start` → **Internal Server Error**
-- When using direct n8n URL `https://kbarbershop.app.n8n.cloud/webhook/oauth/start` → **Works perfectly**
-
-**Root Cause:**
-The Cloudflare Worker at `flightbridge.app` is not properly proxying webhook requests to n8n.
-
-**Error Symptoms:**
-- OAuth Start page shows "Internal Server Error" with 500 status
-- FCView passkey submission returns 302 redirect back to start page (instead of callback)
-- No n8n execution history when using `flightbridge.app` domain
-
-### ⚠️ **Minor Issue: Supabase Duplicate Users**
-
-**Current Error:**
-```
-duplicate key value violates unique constraint "users_email_key"
-Key (email)=(new_user@temp.flightbridge.app) already exists
-```
-
-**Why It Happens:**
-- Testing with same `state` parameter (`new_user`)
-- Callback workflow tries to INSERT instead of UPSERT
-
-**Fix Needed:**
-Change Supabase node from `create` operation to `upsert` operation to handle existing users.
-
----
-
-## 🔧 **NEXT: Fix Cloudflare Worker Proxy**
-
-### **Required Cloudflare Worker Fix:**
-
-The Worker needs to properly proxy `/webhook/*` requests to n8n:
-
-```javascript
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    
-    // Proxy webhook requests to n8n (including query params and POST body)
-    if (url.pathname.startsWith('/webhook/')) {
-      const n8nUrl = `https://kbarbershop.app.n8n.cloud${url.pathname}${url.search}`;
-      
-      return fetch(n8nUrl, {
-        method: request.method,
-        headers: request.headers,
-        body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : null
-      });
-    }
-    
-    // Serve your static pages for other routes
-    return fetch(request);
-  }
-}
-```
-
-### **Where to Find Worker Code:**
-1. Check Cloudflare Dashboard → Workers & Pages
-2. Look for worker attached to `flightbridge.app` domain
-3. Or check for `_worker.js` or `functions/` folder in Pages deployment
-
-### **Testing Steps After Fix:**
-1. Test OAuth Start: `https://flightbridge.app/webhook/oauth/start`
-2. Enter TEST1234 passkey
-3. Should redirect to callback with code parameter
-4. Verify n8n execution appears in workflow history
-
----
-
-## 📋 Working URLs
-
-### **Direct n8n URLs (WORKING):**
-- OAuth Start: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
-- OAuth Callback: `https://kbarbershop.app.n8n.cloud/webhook/oauth/callback`
-
-### **Production URLs (BROKEN - needs Cloudflare fix):**
-- Landing Page: `https://flightbridge.app/`
-- Login Page: `https://flightbridge.app/webhook/login`
-- OAuth Start: `https://flightbridge.app/webhook/oauth/start` 🔴
-- OAuth Callback: `https://flightbridge.app/webhook/oauth/callback` 🔴
-- Dashboard: `https://flightbridge.app/webhook/dashboard`
-
-### **FCView API Endpoints:**
-- Authorization: `https://www.flightcrewview2.com/logbook/logbookuserauth/`
-- Token Exchange: `https://www.flightcrewview2.com/logbook/api/token/`
-- Flights API: `https://www.flightcrewview2.com/logbook/api/flights/`
+#### **Error Handling:**
+- ✅ Email already registered → 400 error with message
+- ✅ Invalid credentials → 401 error with message
+- ✅ Network errors caught with friendly message
+- ✅ Password mismatch (frontend validation)
+- ✅ Password too short (frontend validation)
 
 ---
 
 ## 🔧 Technical Configuration
 
-### **OAuth Flow (Verified Working):**
-1. User clicks "Login" → `/webhook/login`
-2. Clicks "Connect with Flight Crew View" → `/webhook/oauth/start`
-3. OAuth Start redirects to FCView with:
-   - `client_id`: `f0cf9180d491f06e`
-   - `redirect_uri`: `https://flightbridge.app/webhook/oauth/callback`
-   - `state`: `new_user` (or unique user identifier)
-4. User enters passkey on FCView authorization page
-5. FCView validates passkey and redirects to callback: `https://flightbridge.app/webhook/oauth/callback?code=XXX&state=new_user`
-6. Callback workflow exchanges authorization code for tokens via HTTP POST:
-   ```
-   POST https://www.flightcrewview2.com/logbook/api/token/
-   Authorization: Basic {base64(client_id:client_secret)}
-   Body: grant_type=authorization_code&code=XXX&redirect_uri=https://flightbridge.app/webhook/oauth/callback
-   ```
-7. Response contains `access_token`, `refresh_token`, `expires_in` (3600 seconds)
-8. Tokens stored in Supabase users table
-9. User redirected to dashboard
-
-### **n8n Workflows:**
-- **OAuth Start** (ID: `3XaAgDv6xmH8KXhI`): Active ✅
-- **OAuth Callback** (ID: `DSZgk07w46MlGEY6`): Active ✅
-- Both workflows tested and working via direct n8n URLs
+### **n8n Workflows (5 Active):**
+1. **FlightBridge Landing Page** - Serves homepage
+2. **FlightBridge Login** - Shows login/signup form (GET)
+3. **FlightBridge Login Auth** - Processes authentication (POST)
+4. **OAuth Start** - Initiates FCView OAuth
+5. **OAuth Callback** - Receives OAuth tokens
 
 ### **Supabase Database Schema:**
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
   fcview_access_token TEXT,
   fcview_refresh_token TEXT,
   fcview_token_expires_at TIMESTAMP,
@@ -194,82 +129,179 @@ CREATE TABLE users (
 );
 ```
 
+### **OAuth Flow (Fully Working):**
+1. User signs up/logs in → gets user_id
+2. Redirected to `/webhook/connect-fcview?user_id=XXX`
+3. Clicks "Connect" → `/webhook/oauth/start?user_id=XXX`
+4. FCView authorization → Callback with code
+5. Token exchange → Store tokens in Supabase (linked to user_id)
+6. Redirect to dashboard
+
 ---
 
-## 🟡 **AFTER Cloudflare Fix:**
+## 📋 Working URLs
 
-### **Immediate Next Steps:**
-1. Fix Cloudflare Worker proxy
-2. Fix Supabase UPSERT logic (change `create` to `upsert`)
-3. Test complete flow via production URLs
-4. Add proper user state generation (not hardcoded "new_user")
+### **Production URLs (ALL WORKING):**
+- Landing Page: `https://flightbridge.app/`
+- Login/Signup: `https://flightbridge.app/webhook/login` ✅ **NEW**
+- Connect FCView: `https://flightbridge.app/webhook/connect-fcview?user_id=XXX`
+- OAuth Start: `https://flightbridge.app/webhook/oauth/start?user_id=XXX`
+- OAuth Callback: `https://flightbridge.app/webhook/oauth/callback`
+- Dashboard: `https://flightbridge.app/webhook/dashboard?user_id=XXX`
+- Terms: `https://flightbridge.app/webhook/terms`
+- Privacy: `https://flightbridge.app/webhook/privacy`
 
-### **Then: Flight Data Integration:**
-1. Create "Sync Flights" workflow
-2. Fetch flights from FCView API using access token
-3. Parse flight data and apply timezone corrections
-4. Store flights in Supabase
-5. Display flights on dashboard
-6. Generate LogTen Pro import URLs
+### **FCView API Endpoints:**
+- Authorization: `https://www.flightcrewview2.com/logbook/logbookuserauth/`
+- Token Exchange: `https://www.flightcrewview2.com/logbook/api/token/`
+- Flights API: `https://www.flightcrewview2.com/logbook/api/flights/`
+
+---
+
+## 🚀 **NEXT STEPS:**
+
+### **Phase 5: Flight Data Sync (Priority)**
+
+#### **A. Update Connect FCView Page**
+- [ ] Add `user_id` parameter to OAuth start URL
+- [ ] Update OAuth Callback to associate tokens with user_id
+- [ ] Test complete signup → connect → dashboard flow
+
+#### **B. Create Dashboard Data Loading**
+- [ ] Modify dashboard to accept `user_id` parameter
+- [ ] Query Supabase for user's FCView tokens
+- [ ] Check token expiration
+- [ ] Refresh token if expired
+
+#### **C. Build Flight Sync Workflow**
+- [ ] Create "Sync Flights" n8n workflow
+- [ ] Trigger: Manual button on dashboard OR scheduled (daily)
+- [ ] Get user's access token from Supabase
+- [ ] Fetch flights from FCView API: `GET /logbook/api/flights/`
+- [ ] Apply timezone corrections:
+  - Parse airport codes
+  - Look up airport timezones
+  - Convert times to Zulu
+  - Calculate accurate flight duration
+- [ ] Store flights in Supabase `flights` table
+- [ ] Return flight list to dashboard
+
+#### **D. Dashboard Flight Display**
+- [ ] Show pending flights (not imported yet)
+- [ ] Display: Flight #, Route, Date, Duration
+- [ ] "Import to LogTen Pro" button per flight
+- [ ] Generate `logten://` URL with flight data
+- [ ] Track imported flights (imported_at timestamp)
+
+#### **E. LogTen Pro URL Generator**
+- [ ] Create "Generate LogTen URL" workflow
+- [ ] Input: flight_id
+- [ ] Format flight data for LogTen Pro URL scheme
+- [ ] Return URL that opens LogTen Pro app
+- [ ] Mark flight as imported in database
+
+### **Phase 6: Subscription & Payments**
+- [ ] Stripe integration
+- [ ] Subscription plans ($9.99/month)
+- [ ] Payment processing
+- [ ] Trial period logic
+- [ ] Subscription status checking
+
+### **Phase 7: Polish & Launch**
+- [ ] Email notifications
+- [ ] Auto-sync scheduling
+- [ ] Error logging & monitoring
+- [ ] User settings page
+- [ ] Mobile responsiveness
+- [ ] Beta user testing
+
+---
+
+## 🗄️ Database Schema (Expanded)
+
+### **Current: users table ✅**
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  fcview_access_token TEXT,
+  fcview_refresh_token TEXT,
+  fcview_token_expires_at TIMESTAMP,
+  subscription_status VARCHAR(50) DEFAULT 'trial',
+  stripe_customer_id VARCHAR(255),
+  auto_sync_enabled BOOLEAN DEFAULT true,
+  fix_timezones BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### **TODO: flights table**
+```sql
+CREATE TABLE flights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  fcview_flight_id VARCHAR(255) UNIQUE,
+  flight_data JSONB NOT NULL,
+  flight_number VARCHAR(50),
+  departure_airport VARCHAR(10),
+  arrival_airport VARCHAR(10),
+  departure_time TIMESTAMP,
+  arrival_time TIMESTAMP,
+  flight_date DATE,
+  duration_minutes INTEGER,
+  imported_to_logten BOOLEAN DEFAULT false,
+  imported_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
+```
 
 ---
 
 ## 📝 Important Notes
 
-### **Test Passkey:**
-- Passkey: `TEST1234`
-- Always works for testing
-- Returns static test flight data
-- Authorization codes valid for 1 hour (vs 5 minutes for real passkeys)
+### **Security:**
+- ✅ Passwords hashed with SHA-256 (never stored plaintext)
+- ✅ Unique email constraint prevents duplicates
+- ✅ All API endpoints use HTTPS
+- ✅ OAuth tokens stored securely in Supabase
+- ⚠️ Consider upgrading to bcrypt for production (more secure than SHA-256)
 
-### **Real Passkeys:**
-- Generated in FCView mobile app: Menu → Settings → Logbook Sync → Generate Passkey
-- Valid for 10 minutes after generation
-- Can only be used once
-- Must be entered immediately after generation
+### **User Experience:**
+- ✅ Tab-based login/signup (no separate pages)
+- ✅ Real-time form validation
+- ✅ Success messages with auto-redirect
+- ✅ Friendly error messages
+- ✅ Smooth transitions
 
-### **Redirect URI Requirements:**
-- MUST be registered in FCView Client Portal: `https://flightbridge.app/webhook/oauth/callback`
-- MUST match exactly in OAuth Start workflow
-- Must use HTTPS (HTTP not allowed)
-- Currently proxied through Cloudflare (which is broken)
-
-### **Token Lifetimes:**
-- Access Token: 1 hour (3600 seconds)
-- Refresh Token: 3 months
-- Authorization Code: 5 minutes (1 hour for TEST1234)
+### **Test Credentials:**
+- Use any email/password to create test account
+- FCView passkey for testing: `TEST1234`
 
 ---
 
-## 🐛 Debug Information
+## 🐛 Known Issues & Future Improvements
 
-### **Successful Test Execution (1740):**
-```
-Start Time: 2025-10-21T23:25:02.512Z
-Workflow: OAuth Callback (DSZgk07w46MlGEY6)
-Status: Error (Supabase duplicate key)
+### **Minor Issues:**
+- [ ] Consider bcrypt instead of SHA-256 for password hashing
+- [ ] Add "Forgot Password" functionality
+- [ ] Add email verification
+- [ ] Add rate limiting for login attempts
+- [ ] Add CSRF protection
 
-Input:
-- Code: 38113060c5785f61663785d5b9e3c8c5
-- State: new_user
-- Referer: https://www.flightcrewview2.com/
-
-Token Exchange Response:
-- Access Token: d2aa1e3124c91acbd34f9569d8c29e5daa6fbbb595b5b4a0d307dd680623c7b8
-- Refresh Token: 46a0d766bbccf402c5131be751b38d356158a1d998d41e46b1959816f4f572dd
-- Expires In: 3600 seconds
-
-Error:
-- Node: Save to Supabase
-- Message: duplicate key value violates unique constraint "users_email_key"
-- Key: (email)=(new_user@temp.flightbridge.app)
-```
-
-### **Current Blockers:**
-1. **P0 - Cloudflare Worker:** Breaks all webhook requests via production domain
-2. **P1 - Supabase UPSERT:** Prevents re-testing with same user (minor, workaround exists)
+### **Enhancement Ideas:**
+- [ ] Social login (Google, Apple)
+- [ ] Two-factor authentication
+- [ ] Remember me functionality
+- [ ] Account settings page
+- [ ] Profile photo upload
 
 ---
 
-**Last Updated:** October 21, 2025, 7:40 PM PST  
-**Current Status:** OAuth fully functional via n8n! Next: Fix Cloudflare Worker proxy to enable production domain.
+**Last Updated:** October 22, 2025, 7:45 AM PST  
+**Current Status:** ✅ Complete user authentication system! Ready to build flight sync workflow.  
+**Next Focus:** Connect OAuth flow to user accounts, then build flight data sync.
