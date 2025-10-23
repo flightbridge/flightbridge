@@ -47,7 +47,7 @@
 - [x] Error handling for invalid credentials
 - [x] Connect FCView page (`/webhook/connect-fcview?user_id=xxx`)
 - [x] User ID flow through OAuth (via state parameter)
-- [x] **Password Reset System** ✅ **NEW**
+- [x] **Password Reset System** ✅
 
 ### Phase 4.5: Password Reset ✅ **COMPLETE** 
 - [x] Forgot password link on login page
@@ -70,75 +70,69 @@
 
 ---
 
-## 🎯 Current Status: Authentication System Complete!
+## 📋 All Working URLs
 
-### ✅ **Latest Progress (Oct 22, 2025, 8:07 PM):**
+### **Public Pages:**
+- **Landing Page:** `https://flightbridge.app/` ✅
+- **Login/Signup:** `https://flightbridge.app/webhook/login` ✅
+- **Terms of Service:** `https://flightbridge.app/webhook/terms` ✅
+- **Privacy Policy:** `https://flightbridge.app/webhook/privacy` ✅
 
-#### **Password Reset System - Complete:**
+### **Authentication Flow:**
+- **Forgot Password Form:** `https://flightbridge.app/webhook/forgot-password` ✅
+- **Forgot Password Handler:** `POST https://flightbridge.app/webhook/forgot-password-reset` ✅
+- **Reset Password Form:** `https://flightbridge.app/webhook/reset-password?token=xxx` ✅
+- **Reset Password Submit:** `POST https://flightbridge.app/webhook/reset-password-submit` ✅
+- **Login Auth Handler:** `POST https://flightbridge.app/webhook/login-auth` ✅
 
-**Workflows Created:**
-1. **FlightBridge Forgot Password** - GET form at `/webhook/forgot-password`
-2. **FlightBridge Forgot Password Handler** - POST to `/webhook/forgot-password-reset`
-   - Validates email
-   - Generates secure reset token (64-char hex)
-   - Sets 1-hour expiration
-   - Sends email via Gmail with reset link
-3. **FlightBridge Reset Password** - GET form at `/webhook/reset-password?token=xxx`
-4. **FlightBridge Reset Password Submit** - POST to `/webhook/reset-password-submit`
-   - Validates token & expiration
-   - Hashes new password (SHA-256)
-   - Updates user password
-   - Clears reset token
+### **User Dashboard:**
+- **Dashboard:** `https://flightbridge.app/webhook/dashboard?user_id=XXX` ✅
+- **Connect FCView:** `https://flightbridge.app/webhook/connect-fcview?user_id=XXX` ✅
 
-**Database Changes:**
-```sql
--- Added to users table
-ALTER TABLE users 
-ADD COLUMN reset_token VARCHAR(255),
-ADD COLUMN reset_token_expires_at TIMESTAMP;
-```
+### **OAuth Flow:**
+- **OAuth Start:** `https://flightbridge.app/webhook/oauth/start?user_id=XXX` ✅
+- **OAuth Callback:** `https://flightbridge.app/webhook/oauth/callback` ✅
 
-**Security Features:**
-- ✅ Tokens expire in 1 hour
-- ✅ Tokens cleared after successful reset
-- ✅ Same response for existing/non-existing emails (prevents user enumeration)
-- ✅ Password validation (minimum 8 characters)
-- ✅ Token stored with user, no separate table needed
-- ✅ Email sent from support@flightbridge.app
-
-**User Flow:**
-1. User clicks "Forgot Password?" on login page
-2. Enters email → Receives reset link
-3. Clicks link → Opens password reset form
-4. Enters new password → Password updated
-5. Redirected to login → Can login with new password
+### **FCView API Endpoints:**
+- **Authorization:** `https://www.flightcrewview2.com/logbook/logbookuserauth/`
+- **Token Exchange:** `https://www.flightcrewview2.com/logbook/api/token/`
+- **Flights API:** `https://www.flightcrewview2.com/logbook/api/flights/` ✅ **WORKING**
 
 ---
 
-## 📋 Working URLs
+## 🔧 Complete n8n Workflow Inventory
 
-### **Production URLs (ALL WORKING):**
-- Landing Page: `https://flightbridge.app/` ✅
-- Login/Signup: `https://flightbridge.app/webhook/login` ✅
-- **Forgot Password: `https://flightbridge.app/webhook/forgot-password` ✅ NEW**
-- **Reset Password: `https://flightbridge.app/webhook/reset-password?token=xxx` ✅ NEW**
-- Connect FCView: `https://flightbridge.app/webhook/connect-fcview?user_id=XXX` ✅
-- OAuth Start: `https://flightbridge.app/webhook/oauth/start?user_id=XXX` ✅
-- OAuth Callback: `https://flightbridge.app/webhook/oauth/callback` ✅
-- Dashboard: `https://flightbridge.app/webhook/dashboard?user_id=XXX` ✅
-- Terms: `https://flightbridge.app/webhook/terms` ✅
-- Privacy: `https://flightbridge.app/webhook/privacy` ✅
+### **Active Workflows (14 Total):**
 
-### **FCView API Endpoints:**
-- Authorization: `https://www.flightcrewview2.com/logbook/logbookuserauth/`
-- Token Exchange: `https://www.flightcrewview2.com/logbook/api/token/`
-- Flights API: `https://www.flightcrewview2.com/logbook/api/flights/` ✅ **WORKING**
+#### **Core Pages (3):**
+1. **FlightBridge Landing Page** - `GET /` - Homepage with hero section
+2. **FlightBridge Terms of Service** - `GET /webhook/terms` - Legal terms
+3. **FlightBridge Privacy Policy** - `GET /webhook/privacy` - Privacy policy
+
+#### **Authentication (4):**
+4. **FlightBridge Login** - `GET /webhook/login` - Login/signup form
+5. **FlightBridge Login Auth** - `POST /webhook/login-auth` - Process login/signup
+6. **FlightBridge Dashboard** - `GET /webhook/dashboard` - User dashboard
+7. **FlightBridge Connect FCView** - `GET /webhook/connect-fcview` - FCView connection page
+
+#### **Password Reset (4):**
+8. **FlightBridge Forgot Password** - `GET /webhook/forgot-password` - Forgot password form
+9. **FlightBridge Forgot Password Handler** - `POST /webhook/forgot-password-reset` - Send reset email
+10. **FlightBridge Password Reset** - `GET /webhook/reset-password` - Reset form with token
+11. **FlightBridge Password Reset Handler** - `POST /webhook/reset-password-submit` - Update password
+
+#### **OAuth & Data Sync (2):**
+12. **FlightBridge OAuth - Step 1 Start** - `GET /webhook/oauth/start` - Initiate FCView OAuth
+13. **FlightBridge OAuth - Step 2 Callback** - `GET /webhook/oauth/callback` - Receive tokens, fetch flights
+
+#### **Utility (1):**
+14. **Web Crawler Handler** - Internal webhook handler - Do not delete
 
 ---
 
 ## 🗄️ Database Schema
 
-### **users table ✅ UPDATED**
+### **users table ✅ COMPLETE**
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -146,18 +140,24 @@ CREATE TABLE users (
   password_hash TEXT NOT NULL,
   first_name VARCHAR(100),
   last_name VARCHAR(100),
+  
+  -- FCView OAuth
   fcview_access_token TEXT,
   fcview_refresh_token TEXT,
   fcview_token_expires_at TIMESTAMP,
   
-  -- Password reset (NEW)
+  -- Password reset
   reset_token VARCHAR(255),
   reset_token_expires_at TIMESTAMP,
   
+  -- Subscription
   subscription_status VARCHAR(50) DEFAULT 'trial',
   stripe_customer_id VARCHAR(255),
+  
+  -- Settings
   auto_sync_enabled BOOLEAN DEFAULT true,
   fix_timezones BOOLEAN DEFAULT true,
+  
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -194,42 +194,83 @@ CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
 
 ---
 
-## 🔧 Technical Configuration
+## 🎯 Current Status: Authentication System Complete!
 
-### **n8n Workflows (9 Active):**
-1. **FlightBridge Landing Page** - Serves homepage
-2. **FlightBridge Login** - Shows login/signup form (GET)
-3. **FlightBridge Login Auth** - Processes authentication (POST)
-4. **FlightBridge Forgot Password** - Shows forgot password form (GET) ✅ **NEW**
-5. **FlightBridge Forgot Password Handler** - Sends reset email (POST) ✅ **NEW**
-6. **FlightBridge Reset Password** - Shows reset form (GET) ✅ **NEW**
-7. **FlightBridge Reset Password Submit** - Updates password (POST) ✅ **NEW**
-8. **OAuth Start** - Initiates FCView OAuth with user_id
-9. **OAuth Callback** - Receives tokens, fetches & parses flights
+### ✅ **Latest Progress (Oct 22, 2025, 9:11 PM):**
 
-### **Complete Authentication Flow:**
+#### **Password Reset System - Complete:**
+
+**Workflows Created:**
+1. **FlightBridge Forgot Password** - GET form at `/webhook/forgot-password`
+2. **FlightBridge Forgot Password Handler** - POST to `/webhook/forgot-password-reset`
+   - Validates email
+   - Generates secure reset token (64-char hex)
+   - Sets 1-hour expiration
+   - Sends email via Gmail with reset link
+3. **FlightBridge Password Reset** - GET form at `/webhook/reset-password?token=xxx`
+4. **FlightBridge Password Reset Handler** - POST to `/webhook/reset-password-submit`
+   - Validates token & expiration
+   - Hashes new password (SHA-256)
+   - Updates user password
+   - Clears reset token
+
+**Security Features:**
+- ✅ Tokens expire in 1 hour
+- ✅ Tokens cleared after successful reset
+- ✅ Same response for existing/non-existing emails (prevents user enumeration)
+- ✅ Password validation (minimum 8 characters)
+- ✅ Token stored with user, no separate table needed
+- ✅ Email sent from support@flightbridge.app
+
+**User Flow:**
+1. User clicks "Forgot Password?" on login page
+2. Enters email → Receives reset link
+3. Clicks link → Opens password reset form
+4. Enters new password → Password updated
+5. Redirected to login → Can login with new password
+
+---
+
+## 🔐 Complete Authentication Flow
+
 ```
-SIGNUP/LOGIN:
+SIGNUP:
 1. User visits /webhook/login
-2. Creates account or logs in
-3. Password hashed with SHA-256
-4. Redirected to dashboard or connect FCView
+2. Fills signup form (name, email, password)
+3. POST /webhook/login-auth (action: signup)
+4. Password hashed with SHA-256, stored in users table
+5. Redirected to /webhook/connect-fcview?user_id=xxx
+
+LOGIN:
+1. User visits /webhook/login
+2. Enters credentials
+3. POST /webhook/login-auth (action: login)
+4. Password verified against hash
+5. Check FCView connection status
+6. Redirect to dashboard (if connected) or connect page (if not)
 
 PASSWORD RESET:
 1. User clicks "Forgot Password?"
-2. Enters email → /webhook/forgot-password-reset (POST)
-3. Generates token, saves to DB, sends email
-4. User clicks email link → /webhook/reset-password?token=xxx (GET)
-5. Enters new password → /webhook/reset-password-submit (POST)
-6. Validates token, hashes password, updates DB, clears token
-7. Redirected to login with success message
+2. Enters email → POST /webhook/forgot-password-reset
+3. Generate token, save to users.reset_token
+4. Send email with reset link
+5. User clicks link → GET /webhook/reset-password?token=xxx
+6. Enters new password → POST /webhook/reset-password-submit
+7. Validate token, hash password, update users.password_hash
+8. Clear reset_token fields
+9. Redirect to login
 
 OAUTH:
-1. User connects FCView account
-2. OAuth flow exchanges code for tokens
-3. Tokens stored in users table
-4. Flights fetched and parsed
-5. Ready for dashboard display
+1. User clicks "Connect FCView"
+2. GET /webhook/oauth/start?user_id=xxx
+3. Redirect to FCView authorization
+4. FCView redirects to /webhook/oauth/callback?code=xxx&state=user_id
+5. Exchange code for access_token & refresh_token
+6. Store tokens in users table
+7. Fetch flights from FCView API
+8. Parse and prepare flight data
+9. [NEXT] Insert flights to database
+10. Redirect to dashboard
 ```
 
 ---
@@ -240,7 +281,7 @@ OAUTH:
 **Goal:** Mass insert flights with automatic updates for existing records
 
 **Steps:**
-1. Add Supabase node after "Parse Flight Data" code node
+1. Add Supabase node after "Parse Flight Data" code node in OAuth Callback workflow
 2. **Operation:** Insert
 3. **Enable:** On Conflict → Do Update
 4. **Conflict Column:** `fcview_flight_id`
@@ -281,20 +322,28 @@ OAUTH:
 - [ ] Mark flights as imported
 - [ ] Test complete sync: FCView → Dashboard → LogTen Pro
 
-### ⏳ **Phase 7: Subscription & Payments (NOT STARTED)**
+### ⏳ **Phase 7: Settings & User Management (NOT STARTED)**
+- [ ] Settings page (`/webhook/settings`)
+- [ ] Change password
+- [ ] Auto-sync toggle
+- [ ] Timezone fix toggle
+- [ ] Disconnect FCView
+- [ ] Delete account
+
+### ⏳ **Phase 8: Subscription & Payments (NOT STARTED)**
 - [ ] Stripe integration
 - [ ] $9.99/month subscription
 - [ ] Trial period logic
 - [ ] Payment webhook handling
 - [ ] Subscription status checking
 
-### ⏳ **Phase 8: Polish & Launch (NOT STARTED)**
+### ⏳ **Phase 9: Polish & Launch (NOT STARTED)**
 - [ ] Email notifications
-- [ ] Auto-sync scheduling
 - [ ] Error logging & monitoring
-- [ ] User settings page
 - [ ] Mobile responsiveness testing
 - [ ] Beta user testing
+- [ ] Performance optimization
+- [ ] SEO optimization
 
 ---
 
@@ -320,6 +369,6 @@ OAUTH:
 
 ---
 
-**Last Updated:** October 22, 2025, 8:07 PM PST  
-**Current Status:** ✅ Complete authentication system with password reset! Ready for flight data sync.  
+**Last Updated:** October 22, 2025, 9:11 PM PST  
+**Current Status:** ✅ 14 active workflows! Complete authentication system with password reset ready!  
 **Next Focus:** Configure Supabase batch upsert for flight data, display real flights on dashboard.
