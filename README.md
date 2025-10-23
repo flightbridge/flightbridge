@@ -2,7 +2,7 @@
 
 **Sync Flight Crew View to LogTen Pro with Automatic Timezone Corrections**
 
-🚀 **Status:** Password Reset Complete! OAuth & Authentication System Ready! 🎉  
+🚀 **Status:** Dashboard UI Complete with Real Flight Data! 🎉  
 🌐 **Live:** https://flightbridge.app/  
 📊 **Dashboard:** https://flightbridge.app/webhook/dashboard
 
@@ -15,7 +15,6 @@
 - [x] Cloudflare Worker proxy ✅ **FIXED & WORKING**
 - [x] Landing page live (with Login button)
 - [x] Privacy & Terms pages
-- [x] Dashboard UI (ready for real data)
 - [x] Supabase database
 - [x] GitHub repository
 
@@ -31,42 +30,54 @@
 - [x] OAuth flow **FULLY WORKING** ✅
 - [x] Token exchange working ✅
 - [x] Access & refresh tokens retrieved successfully ✅
-- [x] Cloudflare Worker proxy - **FIXED & WORKING** ✅
-- [x] Authorization header error - **FIXED** ✅
 - [x] Flight data API call - **WORKING** ✅ (returns ~100KB JSON with 60+ flights)
 
 ### Phase 4: User Authentication ✅ **COMPLETE** 
 - [x] Login/Signup page created (`/webhook/login`)
 - [x] User registration workflow built
 - [x] Password hashing (SHA-256)
-- [x] Duplicate email checking
 - [x] User login workflow built
 - [x] FCView connection status check
-- [x] Automatic routing (Dashboard vs Connect FCView)
-- [x] Success messages with redirect delays
-- [x] Error handling for invalid credentials
 - [x] Connect FCView page (`/webhook/connect-fcview?user_id=xxx`)
-- [x] User ID flow through OAuth (via state parameter)
 - [x] **Password Reset System** ✅
 
-### Phase 4.5: Password Reset ✅ **COMPLETE** 
-- [x] Forgot password link on login page
-- [x] Forgot password form (`/webhook/forgot-password`)
-- [x] Password reset email with token
-- [x] Reset password form (`/webhook/reset-password`)
-- [x] Token validation & expiration (1 hour)
-- [x] Password update workflow
-- [x] Security: Same message for existing/non-existing emails
-- [x] Token cleanup after successful reset
-
-### Phase 5: Flight Data Sync 🚧 **IN PROGRESS**
+### Phase 5: Flight Data Sync & Dashboard ✅ **COMPLETE**
 - [x] OAuth Callback retrieves flight data from FCView API
 - [x] Flight data parsing code node added
 - [x] Filters out deadhead flights
-- [x] Extracts: flight_number, airports, times, aircraft, runways
-- [ ] **CURRENT:** Configure Supabase upsert for mass flight insertion
-- [ ] Test complete flow with real user data
-- [ ] Background sync workflow (daily at 6am)
+- [x] Database stores 414 flights for test user
+- [x] **Dashboard displays real flight data** ✅
+- [x] **Fixed "Get Flights" Supabase query bug** ✅
+- [x] **Built complete dashboard UI** ✅
+- [x] Flight cards show: trip number, block, scheduled/actual times, duration, aircraft
+- [x] Expandable "More Details" section with UTC times and tail number
+- [x] Side-by-side scheduled vs actual times layout
+- [x] Pending/Imported status badges
+- [x] Import to LogTen Pro buttons (ready for Phase 6)
+
+---
+
+## 🎨 Dashboard Features (Just Built!)
+
+### **Flight Display:**
+- ✅ Shows all user flights from database (414 flights working!)
+- ✅ Clean card layout with flight number and status
+- ✅ Route display (ATL → MLU)
+- ✅ Trip number from FCView
+- ✅ Block time
+- ✅ Scheduled departure & arrival (side-by-side)
+- ✅ Actual departure & arrival (side-by-side)
+- ✅ Flight duration
+- ✅ Expandable "More Details" section with:
+  - Tail number
+  - Actual departure UTC
+  - Actual arrival UTC
+
+### **Header:**
+- ✅ Green "Connected to FCView" status box
+- ✅ Last synced timestamp
+- ✅ Sync Now button (refreshes page)
+- ✅ Settings button (placeholder)
 
 ---
 
@@ -80,59 +91,22 @@
 
 ### **Authentication Flow:**
 - **Forgot Password Form:** `https://flightbridge.app/webhook/forgot-password` ✅
-- **Forgot Password Handler:** `POST https://flightbridge.app/webhook/forgot-password-reset` ✅
 - **Reset Password Form:** `https://flightbridge.app/webhook/reset-password?token=xxx` ✅
-- **Reset Password Submit:** `POST https://flightbridge.app/webhook/reset-password-submit` ✅
 - **Login Auth Handler:** `POST https://flightbridge.app/webhook/login-auth` ✅
 
 ### **User Dashboard:**
-- **Dashboard:** `https://flightbridge.app/webhook/dashboard?user_id=XXX` ✅
+- **Dashboard:** `https://flightbridge.app/webhook/dashboard?user_id=XXX` ✅ **REAL DATA!**
 - **Connect FCView:** `https://flightbridge.app/webhook/connect-fcview?user_id=XXX` ✅
 
 ### **OAuth Flow:**
 - **OAuth Start:** `https://flightbridge.app/webhook/oauth/start?user_id=XXX` ✅
 - **OAuth Callback:** `https://flightbridge.app/webhook/oauth/callback` ✅
 
-### **FCView API Endpoints:**
-- **Authorization:** `https://www.flightcrewview2.com/logbook/logbookuserauth/`
-- **Token Exchange:** `https://www.flightcrewview2.com/logbook/api/token/`
-- **Flights API:** `https://www.flightcrewview2.com/logbook/api/flights/` ✅ **WORKING**
-
----
-
-## 🔧 Complete n8n Workflow Inventory
-
-### **Active Workflows (14 Total):**
-
-#### **Core Pages (3):**
-1. **FlightBridge Landing Page** - `GET /` - Homepage with hero section
-2. **FlightBridge Terms of Service** - `GET /webhook/terms` - Legal terms
-3. **FlightBridge Privacy Policy** - `GET /webhook/privacy` - Privacy policy
-
-#### **Authentication (4):**
-4. **FlightBridge Login** - `GET /webhook/login` - Login/signup form
-5. **FlightBridge Login Auth** - `POST /webhook/login-auth` - Process login/signup
-6. **FlightBridge Dashboard** - `GET /webhook/dashboard` - User dashboard
-7. **FlightBridge Connect FCView** - `GET /webhook/connect-fcview` - FCView connection page
-
-#### **Password Reset (4):**
-8. **FlightBridge Forgot Password** - `GET /webhook/forgot-password` - Forgot password form
-9. **FlightBridge Forgot Password Handler** - `POST /webhook/forgot-password-reset` - Send reset email
-10. **FlightBridge Password Reset** - `GET /webhook/reset-password` - Reset form with token
-11. **FlightBridge Password Reset Handler** - `POST /webhook/reset-password-submit` - Update password
-
-#### **OAuth & Data Sync (2):**
-12. **FlightBridge OAuth - Step 1 Start** - `GET /webhook/oauth/start` - Initiate FCView OAuth
-13. **FlightBridge OAuth - Step 2 Callback** - `GET /webhook/oauth/callback` - Receive tokens, fetch flights
-
-#### **Utility (1):**
-14. **Web Crawler Handler** - Internal webhook handler - Do not delete
-
 ---
 
 ## 🗄️ Database Schema
 
-### **users table ✅ COMPLETE**
+### **users table**
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -163,71 +137,96 @@ CREATE TABLE users (
 );
 ```
 
-### **flights table ✅ COMPLETE**
+### **flights table**
 ```sql
 CREATE TABLE flights (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  fcview_flight_id VARCHAR(255) UNIQUE NOT NULL,
-  
+  user_id UUID REFERENCES users(id),
+  fcview_flight_id VARCHAR(255) UNIQUE,
   flight_number VARCHAR(50),
   departure_airport VARCHAR(10),
   arrival_airport VARCHAR(10),
-  departure_time TIMESTAMP,
-  arrival_time TIMESTAMP,
-  flight_date DATE,
   
-  aircraft_type VARCHAR(50),
+  -- Times
+  scheduled_out_local TIMESTAMP,
+  scheduled_in_local TIMESTAMP,
+  actual_out_local TIMESTAMP,
+  actual_in_local TIMESTAMP,
+  actual_out_local_utc TIMESTAMP,
+  actual_in_local_utc TIMESTAMP,
+  
+  -- Flight details
+  Block VARCHAR(10),
+  flight_duration VARCHAR(10),
+  fcview_trip_number VARCHAR(50),
   tail_number VARCHAR(20),
-  departure_runway VARCHAR(10),
-  arrival_runway VARCHAR(10),
-  duration_minutes INTEGER,
   
+  -- Sync status
   imported_to_logten BOOLEAN DEFAULT false,
   imported_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
+CREATE INDEX idx_user_flights ON flights(user_id, actual_out_local DESC);
 ```
 
 ---
 
-## 🎯 Current Status: Authentication System Complete!
+## 🎯 Current Status: Dashboard Complete!
 
-### ✅ **Latest Progress (Oct 22, 2025, 9:11 PM):**
+### ✅ **Latest Progress (Oct 23, 2025, 9:40 AM):**
 
-#### **Password Reset System - Complete:**
+**Dashboard UI Build - Complete:**
+1. ✅ Fixed Supabase "Get Flights" node filter bug (`.item` → `.first()`)
+2. ✅ All 414 flights now load correctly
+3. ✅ Built complete dashboard with real data
+4. ✅ Data transformation node processes all flight fields
+5. ✅ HTML generation with side-by-side scheduled/actual times
+6. ✅ Expandable details section for UTC times and tail number
+7. ✅ Clean, professional UI matching user requirements
+8. ✅ Import buttons ready (awaiting LogTen URL generation)
 
-**Workflows Created:**
-1. **FlightBridge Forgot Password** - GET form at `/webhook/forgot-password`
-2. **FlightBridge Forgot Password Handler** - POST to `/webhook/forgot-password-reset`
-   - Validates email
-   - Generates secure reset token (64-char hex)
-   - Sets 1-hour expiration
-   - Sends email via Gmail with reset link
-3. **FlightBridge Password Reset** - GET form at `/webhook/reset-password?token=xxx`
-4. **FlightBridge Password Reset Handler** - POST to `/webhook/reset-password-submit`
-   - Validates token & expiration
-   - Hashes new password (SHA-256)
-   - Updates user password
-   - Clears reset token
+**Key Technical Fixes:**
+- Fixed expression: `$('Get User').first().json.id` (was `.item`)
+- Removed Handlebars dependency (not allowed in n8n)
+- Built pure JavaScript template generation
+- Side-by-side time display layout
+- Moved tail number to expandable section
+- Green status box stays within bounds
 
-**Security Features:**
-- ✅ Tokens expire in 1 hour
-- ✅ Tokens cleared after successful reset
-- ✅ Same response for existing/non-existing emails (prevents user enumeration)
-- ✅ Password validation (minimum 8 characters)
-- ✅ Token stored with user, no separate table needed
-- ✅ Email sent from support@flightbridge.app
+---
 
-**User Flow:**
-1. User clicks "Forgot Password?" on login page
-2. Enters email → Receives reset link
-3. Clicks link → Opens password reset form
-4. Enters new password → Password updated
-5. Redirected to login → Can login with new password
+## 🚧 **IMMEDIATE NEXT STEPS:**
+
+### **Task #1: Generate LogTen Pro Import URLs (Priority)**
+**Goal:** Create `logten://` URLs that open LogTen Pro with pre-filled flight data
+
+**Steps:**
+1. Create new workflow: "Generate LogTen URL"
+2. Trigger: Webhook `/webhook/generate-logten?user_id=xxx&flight_id=yyy`
+3. Get flight from database
+4. Transform data to LogTen Pro format:
+   - Convert timestamps to LogTen format
+   - Calculate durations in HH:MM
+   - Apply timezone corrections
+   - Format aircraft type
+5. Build URL: `logten://import?data={encoded_json}`
+6. Return URL to dashboard
+7. Dashboard opens URL → LogTen Pro imports flight
+
+### **Task #2: Background Sync Workflow**
+- Scheduled trigger (daily 6am)
+- Get all users with valid FCView tokens
+- Fetch new flights from FCView API
+- Upsert to database
+- Handle token refresh if needed
+
+### **Task #3: Settings Page**
+- Create settings workflow (`/webhook/settings`)
+- Display user email, connection status
+- Change password option
+- Auto-sync toggle
+- Disconnect FCView button
+- Delete account option
 
 ---
 
@@ -236,113 +235,72 @@ CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
 ```
 SIGNUP:
 1. User visits /webhook/login
-2. Fills signup form (name, email, password)
-3. POST /webhook/login-auth (action: signup)
-4. Password hashed with SHA-256, stored in users table
-5. Redirected to /webhook/connect-fcview?user_id=xxx
+2. Fills signup form → POST /webhook/login-auth (action: signup)
+3. Password hashed, stored in users table
+4. Redirected to /webhook/connect-fcview?user_id=xxx
 
 LOGIN:
 1. User visits /webhook/login
-2. Enters credentials
-3. POST /webhook/login-auth (action: login)
-4. Password verified against hash
-5. Check FCView connection status
-6. Redirect to dashboard (if connected) or connect page (if not)
+2. Enters credentials → POST /webhook/login-auth (action: login)
+3. Check FCView connection status
+4. Redirect to dashboard (if connected) or connect page (if not)
 
 PASSWORD RESET:
 1. User clicks "Forgot Password?"
-2. Enters email → POST /webhook/forgot-password-reset
-3. Generate token, save to users.reset_token
-4. Send email with reset link
-5. User clicks link → GET /webhook/reset-password?token=xxx
-6. Enters new password → POST /webhook/reset-password-submit
-7. Validate token, hash password, update users.password_hash
-8. Clear reset_token fields
-9. Redirect to login
+2. Enters email → Reset link sent
+3. Clicks link → Enters new password
+4. Password updated → Redirect to login
 
 OAUTH:
 1. User clicks "Connect FCView"
 2. GET /webhook/oauth/start?user_id=xxx
-3. Redirect to FCView authorization
-4. FCView redirects to /webhook/oauth/callback?code=xxx&state=user_id
-5. Exchange code for access_token & refresh_token
-6. Store tokens in users table
-7. Fetch flights from FCView API
-8. Parse and prepare flight data
-9. [NEXT] Insert flights to database
-10. Redirect to dashboard
+3. FCView authorization → Callback with code
+4. Exchange code for tokens → Fetch flights
+5. Store flights in database → Redirect to dashboard
+
+DASHBOARD:
+1. GET /webhook/dashboard?user_id=xxx
+2. Query user from database
+3. Query flights from database (414 flights)
+4. Transform data for display
+5. Build HTML with flight cards
+6. Show pending flights with import buttons
 ```
-
----
-
-## 🚧 **IMMEDIATE NEXT STEPS:**
-
-### **Task #1: Configure Supabase Upsert for Flights (Priority)**
-**Goal:** Mass insert flights with automatic updates for existing records
-
-**Steps:**
-1. Add Supabase node after "Parse Flight Data" code node in OAuth Callback workflow
-2. **Operation:** Insert
-3. **Enable:** On Conflict → Do Update
-4. **Conflict Column:** `fcview_flight_id`
-5. **Columns to Insert:** All parsed flight fields
-
-### **Task #2: Dashboard Real Data Integration**
-- Query flights from Supabase by user_id
-- Display pending flights (not imported yet)
-- Show flight details: route, date, aircraft
-- "Import to LogTen Pro" button per flight
-
-### **Task #3: Background Sync Workflow**
-- Scheduled trigger (daily 6am)
-- Fetch all users with FCView tokens
-- Update flight data for each user
-- Handle token refresh if needed
 
 ---
 
 ## 📝 Implementation Roadmap
 
-### ✅ **Phase 1-4.5: COMPLETE**
-- Foundation, API integration, OAuth, User auth, Password reset
+### ✅ **Phase 1-5: COMPLETE**
+- Foundation, API integration, OAuth, User auth, Password reset, Dashboard UI
 
-### 🚧 **Phase 5: Flight Data Sync (IN PROGRESS)**
-- [x] OAuth callback fetches flights
-- [x] Flight data parsing
-- [ ] **CURRENT:** Supabase batch upsert
-- [ ] Dashboard displays real flights
-- [ ] Background sync workflow (daily)
-- [ ] Timezone correction logic
-- [ ] Flight duration calculation
-
-### ⏳ **Phase 6: LogTen Pro Integration (NOT STARTED)**
-- [ ] Generate `logten://` URL workflow
+### 🚧 **Phase 6: LogTen Pro Integration (NEXT)**
+- [ ] **CURRENT:** Generate `logten://` URL workflow
 - [ ] Format flight data for LogTen Pro
 - [ ] Handle timezone conversions
 - [ ] Mark flights as imported
 - [ ] Test complete sync: FCView → Dashboard → LogTen Pro
+- [ ] Update flight status badges after import
 
-### ⏳ **Phase 7: Settings & User Management (NOT STARTED)**
-- [ ] Settings page (`/webhook/settings`)
+### ⏳ **Phase 7: Background Sync & Settings**
+- [ ] Daily sync workflow
+- [ ] Token refresh handling
+- [ ] Settings page
 - [ ] Change password
 - [ ] Auto-sync toggle
-- [ ] Timezone fix toggle
 - [ ] Disconnect FCView
-- [ ] Delete account
 
-### ⏳ **Phase 8: Subscription & Payments (NOT STARTED)**
+### ⏳ **Phase 8: Subscription & Payments**
 - [ ] Stripe integration
 - [ ] $9.99/month subscription
 - [ ] Trial period logic
 - [ ] Payment webhook handling
-- [ ] Subscription status checking
 
-### ⏳ **Phase 9: Polish & Launch (NOT STARTED)**
+### ⏳ **Phase 9: Polish & Launch**
 - [ ] Email notifications
-- [ ] Error logging & monitoring
-- [ ] Mobile responsiveness testing
+- [ ] Error logging
+- [ ] Mobile testing
 - [ ] Beta user testing
-- [ ] Performance optimization
 - [ ] SEO optimization
 
 ---
@@ -351,7 +309,7 @@ OAUTH:
 
 **Current Monthly Costs:**
 - n8n Cloud: $20/month
-- Supabase: $0 (free tier, <500MB)
+- Supabase: $0 (free tier, <500MB, 414 flights stored)
 - Cloudflare: $0 (free tier)
 - Domain: $0.60/month
 - **Total: $20.60/month**
@@ -363,12 +321,11 @@ OAUTH:
 ## 📞 Support & Resources
 
 **GitHub:** https://github.com/flightbridge/flightbridge  
-**Documentation:** See QUICKSTART.md and DEPLOYMENT.md  
 **n8n Cloud:** https://app.n8n.cloud  
 **Supabase:** https://supabase.com/dashboard
 
 ---
 
-**Last Updated:** October 22, 2025, 9:11 PM PST  
-**Current Status:** ✅ 14 active workflows! Complete authentication system with password reset ready!  
-**Next Focus:** Configure Supabase batch upsert for flight data, display real flights on dashboard.
+**Last Updated:** October 23, 2025, 9:40 AM PST  
+**Current Status:** ✅ Dashboard UI complete with real flight data! 414 flights displaying correctly!  
+**Next Focus:** Build LogTen Pro import URL generation workflow.
