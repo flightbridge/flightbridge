@@ -2,7 +2,7 @@
 
 **Sync Flight Crew View to LogTen Pro with Automatic Timezone Corrections**
 
-🚀 **Status:** OAuth Complete! Flight Data Sync In Progress! 🎉  
+🚀 **Status:** Password Reset Complete! OAuth & Authentication System Ready! 🎉  
 🌐 **Live:** https://flightbridge.app/  
 📊 **Dashboard:** https://flightbridge.app/webhook/dashboard
 
@@ -47,6 +47,17 @@
 - [x] Error handling for invalid credentials
 - [x] Connect FCView page (`/webhook/connect-fcview?user_id=xxx`)
 - [x] User ID flow through OAuth (via state parameter)
+- [x] **Password Reset System** ✅ **NEW**
+
+### Phase 4.5: Password Reset ✅ **COMPLETE** 
+- [x] Forgot password link on login page
+- [x] Forgot password form (`/webhook/forgot-password`)
+- [x] Password reset email with token
+- [x] Reset password form (`/webhook/reset-password`)
+- [x] Token validation & expiration (1 hour)
+- [x] Password update workflow
+- [x] Security: Same message for existing/non-existing emails
+- [x] Token cleanup after successful reset
 
 ### Phase 5: Flight Data Sync 🚧 **IN PROGRESS**
 - [x] OAuth Callback retrieves flight data from FCView API
@@ -59,110 +70,48 @@
 
 ---
 
-## 🎯 Current Status: Flight Data Extraction Ready!
+## 🎯 Current Status: Authentication System Complete!
 
-### ✅ **Latest Progress (Oct 22, 2025, 2:43 PM):**
+### ✅ **Latest Progress (Oct 22, 2025, 8:07 PM):**
 
-#### **OAuth Callback Workflow - Enhanced:**
-1. **Webhook** - Receives OAuth callback with code & state (user_id)
-2. **Code: Exchange Code for Tokens** - Gets access_token & refresh_token
-3. **Supabase: Store Tokens** - Saves tokens to users table
-4. **HTTP Request: Get Flights** - Fetches all flights from FCView API
-   - Authorization: `Bearer {access_token}` ✅ **WORKING**
-   - Returns ~100KB JSON with 60+ flights
-5. **Code: Parse Flight Data** ✅ **NEW** - Extracts flight details:
-   ```javascript
-   - user_id (from state parameter)
-   - fcview_flight_id (unique identifier)
-   - flight_number
-   - departure_airport, arrival_airport
-   - departure_time, arrival_time (UTC)
-   - flight_date
-   - aircraft_type, tail_number
-   - departure_runway, arrival_runway
-   - Filters: !is_deadhead (skip deadhead flights)
-   ```
-6. **Supabase: Insert Flights** ⏳ **NEXT** - Batch upsert to flights table
+#### **Password Reset System - Complete:**
 
-#### **Database Schema Updates:**
+**Workflows Created:**
+1. **FlightBridge Forgot Password** - GET form at `/webhook/forgot-password`
+2. **FlightBridge Forgot Password Handler** - POST to `/webhook/forgot-password-reset`
+   - Validates email
+   - Generates secure reset token (64-char hex)
+   - Sets 1-hour expiration
+   - Sends email via Gmail with reset link
+3. **FlightBridge Reset Password** - GET form at `/webhook/reset-password?token=xxx`
+4. **FlightBridge Reset Password Submit** - POST to `/webhook/reset-password-submit`
+   - Validates token & expiration
+   - Hashes new password (SHA-256)
+   - Updates user password
+   - Clears reset token
+
+**Database Changes:**
 ```sql
--- flights table structure (COMPLETE)
-CREATE TABLE flights (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  fcview_flight_id VARCHAR(255) UNIQUE NOT NULL,
-  
-  -- Flight details
-  flight_number VARCHAR(50),
-  departure_airport VARCHAR(10),
-  arrival_airport VARCHAR(10),
-  departure_time TIMESTAMP,
-  arrival_time TIMESTAMP,
-  flight_date DATE,
-  
-  -- Aircraft info (NEW)
-  aircraft_type VARCHAR(50),
-  tail_number VARCHAR(20),
-  departure_runway VARCHAR(10),
-  arrival_runway VARCHAR(10),
-  duration_minutes INTEGER,
-  
-  -- LogTen sync tracking
-  imported_to_logten BOOLEAN DEFAULT false,
-  imported_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Index for fast queries
-CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
+-- Added to users table
+ALTER TABLE users 
+ADD COLUMN reset_token VARCHAR(255),
+ADD COLUMN reset_token_expires_at TIMESTAMP;
 ```
 
-**Note:** ✅ Removed `flight_data` JSONB column to save storage (using parsed fields only)
+**Security Features:**
+- ✅ Tokens expire in 1 hour
+- ✅ Tokens cleared after successful reset
+- ✅ Same response for existing/non-existing emails (prevents user enumeration)
+- ✅ Password validation (minimum 8 characters)
+- ✅ Token stored with user, no separate table needed
+- ✅ Email sent from support@flightbridge.app
 
----
-
-## 🚧 **IMMEDIATE NEXT STEPS:**
-
-### **Task #1: Configure Supabase Upsert (Priority)**
-**Goal:** Mass insert flights with automatic updates for existing records
-
-**Steps:**
-1. Add Supabase node after "Parse Flight Data" code node
-2. **Operation:** Insert
-3. **Enable:** On Conflict → Do Update
-4. **Conflict Column:** `fcview_flight_id`
-5. **Columns to Insert:**
-   - user_id
-   - fcview_flight_id
-   - flight_number
-   - departure_airport
-   - arrival_airport
-   - departure_time
-   - arrival_time
-   - flight_date
-   - aircraft_type
-   - tail_number
-   - departure_runway
-   - arrival_runway
-
-**Why Upsert?**
-- Handles duplicate flights automatically
-- Updates existing records if FCView data changes
-- Processes all 60+ flights in one batch operation
-
-### **Task #2: Test Complete OAuth → Flight Sync Flow**
-1. User signs up/logs in
-2. Connects FCView account
-3. OAuth callback runs
-4. Flights automatically sync to database
-5. Verify flights appear in Supabase
-
-### **Task #3: Dashboard Real Data Integration**
-- Query flights from Supabase by user_id
-- Display pending flights (not imported yet)
-- Show flight details: route, date, aircraft
-- "Import to LogTen Pro" button per flight
+**User Flow:**
+1. User clicks "Forgot Password?" on login page
+2. Enters email → Receives reset link
+3. Clicks link → Opens password reset form
+4. Enters new password → Password updated
+5. Redirected to login → Can login with new password
 
 ---
 
@@ -171,6 +120,8 @@ CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
 ### **Production URLs (ALL WORKING):**
 - Landing Page: `https://flightbridge.app/` ✅
 - Login/Signup: `https://flightbridge.app/webhook/login` ✅
+- **Forgot Password: `https://flightbridge.app/webhook/forgot-password` ✅ NEW**
+- **Reset Password: `https://flightbridge.app/webhook/reset-password?token=xxx` ✅ NEW**
 - Connect FCView: `https://flightbridge.app/webhook/connect-fcview?user_id=XXX` ✅
 - OAuth Start: `https://flightbridge.app/webhook/oauth/start?user_id=XXX` ✅
 - OAuth Callback: `https://flightbridge.app/webhook/oauth/callback` ✅
@@ -187,7 +138,7 @@ CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
 
 ## 🗄️ Database Schema
 
-### **users table ✅ COMPLETE**
+### **users table ✅ UPDATED**
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -198,6 +149,11 @@ CREATE TABLE users (
   fcview_access_token TEXT,
   fcview_refresh_token TEXT,
   fcview_token_expires_at TIMESTAMP,
+  
+  -- Password reset (NEW)
+  reset_token VARCHAR(255),
+  reset_token_expires_at TIMESTAMP,
+  
   subscription_status VARCHAR(50) DEFAULT 'trial',
   stripe_customer_id VARCHAR(255),
   auto_sync_enabled BOOLEAN DEFAULT true,
@@ -240,58 +196,74 @@ CREATE INDEX idx_user_flights ON flights(user_id, flight_date DESC);
 
 ## 🔧 Technical Configuration
 
-### **n8n Workflows (5 Active):**
+### **n8n Workflows (9 Active):**
 1. **FlightBridge Landing Page** - Serves homepage
 2. **FlightBridge Login** - Shows login/signup form (GET)
 3. **FlightBridge Login Auth** - Processes authentication (POST)
-4. **OAuth Start** - Initiates FCView OAuth with user_id
-5. **OAuth Callback** - Receives tokens, fetches & parses flights ✅ **ENHANCED**
+4. **FlightBridge Forgot Password** - Shows forgot password form (GET) ✅ **NEW**
+5. **FlightBridge Forgot Password Handler** - Sends reset email (POST) ✅ **NEW**
+6. **FlightBridge Reset Password** - Shows reset form (GET) ✅ **NEW**
+7. **FlightBridge Reset Password Submit** - Updates password (POST) ✅ **NEW**
+8. **OAuth Start** - Initiates FCView OAuth with user_id
+9. **OAuth Callback** - Receives tokens, fetches & parses flights
 
-### **OAuth Flow (Complete & Working):**
+### **Complete Authentication Flow:**
 ```
-1. User signs up/logs in → gets user_id
-2. Redirected to /webhook/connect-fcview?user_id=XXX
-3. Clicks "Connect" → /webhook/oauth/start?user_id=XXX
-4. FCView authorization → Callback with code & state=user_id
-5. Token exchange → Store in Supabase users table
-6. HTTP Request → Fetch all flights from FCView API
-7. Parse flight data → Extract fields, filter deadheads
-8. [NEXT] Upsert flights → Batch insert to Supabase
-9. Redirect to dashboard with real flight data
+SIGNUP/LOGIN:
+1. User visits /webhook/login
+2. Creates account or logs in
+3. Password hashed with SHA-256
+4. Redirected to dashboard or connect FCView
+
+PASSWORD RESET:
+1. User clicks "Forgot Password?"
+2. Enters email → /webhook/forgot-password-reset (POST)
+3. Generates token, saves to DB, sends email
+4. User clicks email link → /webhook/reset-password?token=xxx (GET)
+5. Enters new password → /webhook/reset-password-submit (POST)
+6. Validates token, hashes password, updates DB, clears token
+7. Redirected to login with success message
+
+OAUTH:
+1. User connects FCView account
+2. OAuth flow exchanges code for tokens
+3. Tokens stored in users table
+4. Flights fetched and parsed
+5. Ready for dashboard display
 ```
 
-### **Flight Data Extraction Logic:**
-```javascript
-const responseData = JSON.parse($json.data);
-const flights = responseData.flights;
-const userId = $('Webhook').first().json.query.state;
+---
 
-return flights
-  .filter(flight => !flight.is_deadhead) // Skip deadhead flights
-  .map(flight => ({
-    json: {
-      user_id: userId,
-      fcview_flight_id: flight.fcv_flight_id,
-      flight_number: flight.flight_number,
-      departure_airport: flight.dep_airport,
-      arrival_airport: flight.arr_airport,
-      departure_time: flight.actual_out_utc || flight.scheduled_out_utc,
-      arrival_time: flight.actual_in_utc || flight.scheduled_in_utc,
-      flight_date: (flight.scheduled_out_local || '').split(' ')[0],
-      aircraft_type: flight.fcv_aircraft_type,
-      tail_number: flight.fcv_tail_number,
-      departure_runway: flight.dep_runway,
-      arrival_runway: flight.arr_runway
-    }
-  }));
-```
+## 🚧 **IMMEDIATE NEXT STEPS:**
+
+### **Task #1: Configure Supabase Upsert for Flights (Priority)**
+**Goal:** Mass insert flights with automatic updates for existing records
+
+**Steps:**
+1. Add Supabase node after "Parse Flight Data" code node
+2. **Operation:** Insert
+3. **Enable:** On Conflict → Do Update
+4. **Conflict Column:** `fcview_flight_id`
+5. **Columns to Insert:** All parsed flight fields
+
+### **Task #2: Dashboard Real Data Integration**
+- Query flights from Supabase by user_id
+- Display pending flights (not imported yet)
+- Show flight details: route, date, aircraft
+- "Import to LogTen Pro" button per flight
+
+### **Task #3: Background Sync Workflow**
+- Scheduled trigger (daily 6am)
+- Fetch all users with FCView tokens
+- Update flight data for each user
+- Handle token refresh if needed
 
 ---
 
 ## 📝 Implementation Roadmap
 
-### ✅ **Phase 1-4: COMPLETE**
-- Foundation, API integration, OAuth, User auth
+### ✅ **Phase 1-4.5: COMPLETE**
+- Foundation, API integration, OAuth, User auth, Password reset
 
 ### 🚧 **Phase 5: Flight Data Sync (IN PROGRESS)**
 - [x] OAuth callback fetches flights
@@ -326,44 +298,6 @@ return flights
 
 ---
 
-## 📊 Technical Achievements
-
-### **FCView API Integration:**
-- ✅ OAuth 2.0 flow implemented correctly
-- ✅ Token exchange working
-- ✅ Authorization header format fixed (`Bearer {token}`)
-- ✅ Flights endpoint returning data (~100KB JSON)
-- ✅ Response parsing handling 60+ flights
-- ✅ Deadhead flight filtering
-
-### **Database Design:**
-- ✅ User-flight relationship (foreign key)
-- ✅ Unique constraint on fcview_flight_id (prevents duplicates)
-- ✅ Index for fast queries by user and date
-- ✅ Optimized schema (removed redundant JSONB column)
-
-### **User Experience:**
-- ✅ Seamless OAuth flow through custom domain
-- ✅ User ID passed through entire flow via state parameter
-- ✅ Automatic token storage linked to user account
-- ✅ Ready for automatic flight sync on connect
-
----
-
-## 🐛 Known Issues & Future Improvements
-
-### **Current Issues:**
-- None! OAuth and data extraction working smoothly ✅
-
-### **Future Enhancements:**
-- [ ] Token refresh logic (when access_token expires)
-- [ ] Error handling for API failures
-- [ ] Rate limiting for FCView API calls
-- [ ] Pagination for users with 100+ flights
-- [ ] Background job queue for sync operations
-
----
-
 ## 💰 Cost Structure
 
 **Current Monthly Costs:**
@@ -386,6 +320,6 @@ return flights
 
 ---
 
-**Last Updated:** October 22, 2025, 2:43 PM PST  
-**Current Status:** ✅ OAuth complete! Flight data extraction ready! Next: Configure Supabase upsert for mass sync.  
-**Next Focus:** Configure batch upsert, test complete flow, display real flights on dashboard.
+**Last Updated:** October 22, 2025, 8:07 PM PST  
+**Current Status:** ✅ Complete authentication system with password reset! Ready for flight data sync.  
+**Next Focus:** Configure Supabase batch upsert for flight data, display real flights on dashboard.
