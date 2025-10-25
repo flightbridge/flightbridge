@@ -10,31 +10,63 @@ Get FlightBridge landing page & dashboard live in 10 minutes!
 
 ---
 
-## ⚠️ CRITICAL ISSUE FOUND (Oct 21, 2025)
+## Current Status (Oct 25, 2025)
 
-### OAuth Flow Status: ✅ WORKING (via n8n direct) / ❌ BROKEN (via Cloudflare)
+### ✅ COMPLETED:
+- **Authentication System**: Full OAuth flow working
+  - OAuth Start & Callback workflows ✅
+  - Login/Signup workflows ✅
+  - Password reset workflows ✅
+  - Tokens storing correctly in Supabase ✅
+- **Landing Page**: Deployed and live
+- **Dashboard**: Deployed with real flight data
+- **Sync Workflow**: "FlightBridge Sync FCView" functional
+  - Filters deadhead/BDM/AVL/DTY flights ✅
+  - Filters incomplete past flights (no actual_out_local) ✅
+  - Filters to last 3 months ✅
+  - INSERT/UPDATE/SKIP logic implemented ✅
+  - Merge node issue resolved (using Append mode) ✅
+- **LogTen Pro Import**: Single-flight import button working ✅
 
-**Issue Discovered:**
-- ✅ OAuth works perfectly: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
-- ❌ OAuth fails with 500 error: `https://flightbridge.app/webhook/oauth/start`
+### 🔄 IN PROGRESS:
+- Sync workflow testing (waiting for new flights to test INSERT/UPDATE/SKIP)
+- Sync button comprehensive testing
 
-**Root Cause:** Cloudflare Worker at `flightbridge.app` is NOT properly proxying `/webhook/*` requests to n8n.
+### 📋 TODO LIST:
 
-**Evidence:**
-1. Test with real FCView passkey via n8n direct URL → ✅ Success
-   - Authorization code received: `38113060c5785f61663785d5b9e3c8c5`
-   - Access token obtained: `d2aa1e3124c91acbd34f9569d8c29e5daa6fbbb595b5b4a0d307dd680623c7b8`
-   - Refresh token obtained: `46a0d766bbccf402c5131be751b38d356158a1d998d41e46b1959816f4f572dd`
+#### High Priority:
+1. **Test INSERT/UPDATE/SKIP Logic**
+   - Need new flights from FCView to verify detection
+   - Confirm UPDATE detection when flight data changes
+   - Verify SKIP for unchanged flights
 
-2. Same passkey via Cloudflare domain → ❌ Internal Server Error (500)
+2. **Pilot Flying Field** (Required before Import)
+   - Add dropdown: Yes/No/[blank default]
+   - User must select before import
+   - Show validation message if not selected: "Please select Pilot Flying (Yes/No) before importing"
+   - Block import button until selected
 
-**Next Action:** Fix Cloudflare Worker configuration in dashboard to properly proxy all `/webhook/*` paths to n8n.
+3. **Dashboard Crew Information**
+   - Add PIC (Captain) field to expandable "More Details" section
+   - Add SIC (First Officer) field to expandable "More Details" section
 
-**FCView OAuth Configuration:**
-- Client ID: `f0cf9180d491f06e`
-- Redirect URI (registered): `https://flightbridge.app/webhook/oauth/callback`
-- OAuth endpoints working correctly
-- Token exchange functioning properly
+#### Medium Priority:
+4. **Date Filter Improvements**
+   - Replace dropdown with calendar date picker
+   - Add date range filter (From/To dates)
+   - Apply filters to flight list display
+
+5. **Mass Import Feature**
+   - Add "Import All Filtered" button
+   - Apply current date range filter
+   - Batch import all visible flights
+   - Show progress indicator during import
+
+#### Future Enhancements:
+- Timezone correction logic verification
+- Auto-sync scheduling
+- Stripe payment integration
+- Email notifications for sync completion
 
 ---
 
@@ -101,12 +133,9 @@ return [{ json: { html } }];
 
 ---
 
-## Step 3: Configure Cloudflare Worker (3 minutes) ⚠️ NEEDS FIX
+## Step 3: Configure Cloudflare Worker (3 minutes)
 
-### Current Issue
-The Cloudflare Worker is NOT properly proxying `/webhook/*` requests, causing OAuth to fail.
-
-### Required Cloudflare Worker Code
+### Cloudflare Worker Code
 
 **Deploy this in Cloudflare Dashboard → Workers & Pages:**
 
@@ -147,8 +176,6 @@ export default {
 };
 ```
 
-**Critical:** This must properly proxy POST requests for OAuth to work.
-
 ### Deployment Steps:
 1. Go to Cloudflare Dashboard → Workers & Pages
 2. Edit existing worker or create new one
@@ -156,168 +183,313 @@ export default {
 4. Deploy
 5. Add route: `flightbridge.app/*` → Your worker
 
-**Test URL After Fix**: https://flightbridge.app/webhook/oauth/start
+---
+
+## Step 4: Authentication Setup ✅
+
+### Completed Workflows:
+
+1. **FlightBridge OAuth - Step 1 Start** ✅
+   - Initiates FCView OAuth flow
+   - Redirects to FCView authorization page
+
+2. **FlightBridge OAuth - Step 2 Callback** ✅
+   - Exchanges authorization code for tokens
+   - Stores access_token & refresh_token in Supabase
+   - Handles token expiration
+
+3. **FlightBridge Login** ✅
+   - Supabase authentication
+   - Session management
+
+4. **FlightBridge Password Reset** ✅
+   - Password reset request
+   - Email verification
+   - Password update
+
+**OAuth Configuration:**
+- Client ID: `f0cf9180d491f06e`
+- Redirect URI: `https://flightbridge.app/webhook/oauth/callback`
+- Token expiration: 1 hour (access), 3 months (refresh)
 
 ---
 
-## Step 4: Verify Everything Works (2 minutes)
+## Step 5: Sync Workflow Setup ✅
+
+### FlightBridge Sync FCView Workflow
+
+**Purpose**: Background sync from FCView API to Supabase database
+
+**Flow**:
+1. Webhook trigger: `/sync-flights?user_id=xxx`
+2. Find user in Supabase
+3. Check token expiration → Refresh if needed
+4. Fetch flights from FCView API (last 3 months)
+5. Fetch existing flights from Supabase
+6. Compare and identify: INSERT / UPDATE / SKIP
+7. Execute database operations
+
+**Filters Applied**:
+- ✅ Deadhead flights excluded (`is_deadhead === 1`)
+- ✅ Special flight types excluded (BDM, AVL, DTY)
+- ✅ Incomplete past flights excluded (no `actual_out_local` if scheduled time passed)
+- ✅ Date range: Last 3 months from `actual_out_local`
+
+**Change Detection Fields**:
+- `actual_out_local`
+- `actual_in_local`
+- `tail_number`
+- `flight_number`
+
+---
+
+## Step 6: Verify Everything Works
 
 ### Check These URLs:
 
 ✅ **Landing Page**: https://flightbridge.app/  
-✅ **Dashboard**: https://flightbridge.app/webhook/dashboard ✅ **NEW!**  
-⚠️ **OAuth Start**: https://flightbridge.app/webhook/oauth/start (BROKEN - needs Cloudflare fix)
-✅ **OAuth Start (direct)**: https://kbarbershop.app.n8n.cloud/webhook/oauth/start (WORKS!)
+✅ **Dashboard**: https://flightbridge.app/webhook/dashboard  
+✅ **OAuth Start**: https://flightbridge.app/webhook/oauth/start  
+✅ **Login**: https://flightbridge.app/webhook/login
 
 ### Test Checklist:
 
-- [ ] Landing page loads with styling
-- [ ] Dashboard displays flight cards with sample data
-- [ ] **OAuth flow works via Cloudflare (currently broken)**
-- [ ] Mobile responsive (test on phone)
-- [ ] All links work (Privacy, Terms, Contact)
-- [ ] "Join Waitlist" button opens email client
-- [ ] Filter buttons work on dashboard
-- [ ] Page loads fast (< 2 seconds)
+- [x] Landing page loads with styling
+- [x] Dashboard displays flight cards with real data
+- [x] OAuth flow complete (authorization → tokens → database)
+- [x] Login/signup working
+- [x] Password reset working
+- [x] Single flight import to LogTen Pro working
+- [x] Mobile responsive
+- [ ] Sync button (pending comprehensive testing)
+- [ ] INSERT/UPDATE/SKIP logic (pending new flights)
+- [ ] Date range filter
+- [ ] Mass import feature
 
 ---
 
-## OAuth Integration Status
+## Dashboard Features
 
-### ✅ Working Components:
-- FCView OAuth authorization page loads correctly
-- Passkey validation working (tested with real user passkey)
-- Authorization code exchange successful
-- Access token and refresh token obtained
-- Tokens stored in Supabase (with minor duplicate key issue to fix)
+### Current Features:
+- ✅ Real flight data from Supabase
+- ✅ Flight list with status badges (Pending/Imported)
+- ✅ Filter buttons (All/Pending/Imported)
+- ✅ Flight details (route, date, time, aircraft, block time)
+- ✅ "Import to LogTen Pro" button (working!)
+- ✅ "Sync Now" button (needs testing)
+- ✅ Expandable "More Details" section
+- ✅ Mobile-responsive design
 
-### ❌ Broken Components:
-- Cloudflare Worker not proxying OAuth requests properly
-- `flightbridge.app/webhook/oauth/start` returns 500 error
-- POST requests to OAuth endpoints failing through Cloudflare
+### Pending UI Improvements:
 
-### 🔧 Current Workaround:
-**Use n8n direct URLs for OAuth testing:**
-- OAuth Start: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
-- OAuth Callback: `https://kbarbershop.app.n8n.cloud/webhook/oauth/callback`
+**1. Pilot Flying Field (High Priority)**
+```html
+<!-- Add to each flight card BEFORE import button -->
+<div class="pilot-flying-selector">
+  <label>Were you Pilot Flying?</label>
+  <select id="pilot-flying-{flight_id}" required>
+    <option value="">-- Select --</option>
+    <option value="Y">Yes</option>
+    <option value="N">No</option>
+  </select>
+</div>
 
-### 📋 Next Steps:
-1. **PRIORITY:** Fix Cloudflare Worker to proxy `/webhook/*` correctly
-2. Minor: Update Supabase node to use UPSERT instead of INSERT (avoid duplicate key errors)
-3. Test complete OAuth flow through `flightbridge.app` domain
-4. Build dashboard to fetch and display user's real flights
+<!-- Update import button logic -->
+<script>
+function importFlight(flightId) {
+  const pilotFlying = document.getElementById(`pilot-flying-${flightId}`).value;
+  
+  if (!pilotFlying) {
+    alert('Please select Pilot Flying (Yes/No) before importing');
+    return;
+  }
+  
+  // Proceed with import...
+}
+</script>
+```
+
+**2. Crew Information in More Details**
+```html
+<!-- Add to expandable section -->
+<div class="detail-row">
+  <span class="label">Captain (PIC):</span>
+  <span class="value">{{PIC}}</span>
+</div>
+<div class="detail-row">
+  <span class="label">First Officer (SIC):</span>
+  <span class="value">{{SIC}}</span>
+</div>
+```
+
+**3. Date Range Filter (Replace Current Dropdown)**
+```html
+<!-- Replace date dropdown with calendar date pickers -->
+<div class="date-filter">
+  <label>From:</label>
+  <input type="date" id="date-from" onchange="filterFlights()">
+  
+  <label>To:</label>
+  <input type="date" id="date-to" onchange="filterFlights()">
+</div>
+```
+
+**4. Mass Import Feature**
+```html
+<!-- Add button next to Sync Now -->
+<button class="mass-import-btn" onclick="massImport()">
+  📦 Import All Filtered ({count} flights)
+</button>
+
+<script>
+async function massImport() {
+  // Get all filtered & visible flights
+  const visibleFlights = getFilteredFlights();
+  
+  // Validate all have pilot_flying selected
+  const missingPF = visibleFlights.filter(f => !f.pilot_flying);
+  if (missingPF.length > 0) {
+    alert(`Please select Pilot Flying for ${missingPF.length} flight(s)`);
+    return;
+  }
+  
+  // Show progress
+  showProgressModal(`Importing ${visibleFlights.length} flights...`);
+  
+  // Import each flight
+  for (const flight of visibleFlights) {
+    await importFlight(flight.id);
+  }
+  
+  hideProgressModal();
+  alert('✅ All flights imported!');
+}
+</script>
+```
 
 ---
 
-## Step 5: Next Actions
+## Database Schema
 
-### Immediate (Today):
+### Users Table:
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  email VARCHAR(255) UNIQUE,
+  fcview_access_token TEXT,
+  fcview_refresh_token TEXT,
+  fcview_token_expires_at TIMESTAMP,
+  subscription_status VARCHAR(50) DEFAULT 'trial',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-1. **Fix Cloudflare Worker** (TOP PRIORITY)
-   - Update worker code to properly proxy `/webhook/*` paths
-   - Test OAuth flow through `flightbridge.app` domain
-   - Verify POST requests work correctly
+### Flights Table:
+```sql
+CREATE TABLE flights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  fcview_flight_id VARCHAR(255) UNIQUE,
+  
+  -- Flight Details
+  flight_number VARCHAR(50),
+  departure_airport VARCHAR(10),
+  arrival_airport VARCHAR(10),
+  dep_icao_code VARCHAR(10),
+  arr_icao_code VARCHAR(10),
+  
+  -- Times
+  scheduled_out_local TIMESTAMP,
+  scheduled_in_local TIMESTAMP,
+  actual_out_local TIMESTAMP,
+  actual_in_local TIMESTAMP,
+  actual_out_local_utc TIMESTAMP,
+  actual_in_local_utc TIMESTAMP,
+  
+  -- Aircraft
+  tail_number VARCHAR(50),
+  aircraft_type VARCHAR(50),
+  
+  -- Crew
+  PIC VARCHAR(255),
+  SIC VARCHAR(255),
+  pilot_flying VARCHAR(1), -- 'Y' or 'N', default NULL (requires user input)
+  
+  -- Duration
+  Block VARCHAR(10),
+  flight_duration VARCHAR(10),
+  
+  -- Trip Info
+  fcview_trip_number VARCHAR(255),
+  
+  -- Import Status
+  imported_to_logten BOOLEAN DEFAULT false,
+  imported_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
-2. **Test OAuth Flow End-to-End**
-   - Generate fresh passkey in FCView mobile app
-   - Complete authorization via `flightbridge.app/webhook/oauth/start`
-   - Verify tokens saved in Supabase
-   - Confirm no duplicate key errors
+CREATE INDEX idx_user_flights ON flights(user_id, actual_out_local DESC);
+CREATE UNIQUE INDEX idx_fcview_flight_id ON flights(fcview_flight_id);
+```
 
-### This Week:
+---
 
-- [ ] Complete OAuth integration through production domain
-- [ ] Fix Supabase duplicate key constraint
-- [ ] Build workflow to fetch flights from FCView API
-- [ ] Connect dashboard to real flight data
-- [ ] Test timezone correction logic
+## Testing Notes
 
-### This Month:
+### What Needs Testing:
 
-- [ ] Set up Stripe payments
-- [ ] Build LogTen Pro URL generation
-- [ ] Test complete sync flow: FCView → Dashboard → LogTen Pro
-- [ ] Launch beta to first users
+1. **Sync Workflow INSERT/UPDATE/SKIP**
+   - ⏳ Waiting for new flights from FCView
+   - Need to verify UPDATE detection when flight changes
+   - Need to verify SKIP for unchanged flights
+   - Current: All flights show as INSERT (expected for first sync)
+
+2. **Sync Button Comprehensive Test**
+   - Trigger manual sync
+   - Verify new flights detected
+   - Verify updated flights detected
+   - Check execution logs in n8n
+
+3. **Mass Import Feature** (After Implementation)
+   - Select date range
+   - Filter flights
+   - Set pilot_flying for all
+   - Trigger mass import
+   - Verify all imported to LogTen Pro
 
 ---
 
 ## Troubleshooting
 
-### OAuth 500 Error at flightbridge.app?
+### Sync Workflow Showing All INSERT?
 
-**Cause:** Cloudflare Worker not proxying correctly
+**Expected Behavior**: First sync after clean database will show all as INSERT
 
-**Fix:** Update Cloudflare Worker code (see Step 3 above)
+**Future Syncs Should**:
+- INSERT: New flights from FCView not in database
+- UPDATE: Flights in database with changed data
+- SKIP: Flights in database with no changes
 
-**Workaround:** Use n8n direct URL: `https://kbarbershop.app.n8n.cloud/webhook/oauth/start`
+**To Test**: 
+1. Run sync once (all INSERT)
+2. Run sync again without changes (all SKIP expected)
+3. Change a flight in FCView
+4. Run sync again (should detect UPDATE)
 
-### Landing Page Not Loading?
+### Import Button Not Working?
 
-**Check:**
-1. n8n workflow is Active
-2. Webhook path is `/home`
-3. Cloudflare Worker routing is correct
-4. DNS is pointing to Cloudflare
+**Check**:
+1. pilot_flying field selected?
+2. LogTen Pro installed on device?
+3. LogTen URL format correct?
+4. Browser console for JavaScript errors
 
-**Debug:**
-- Test direct n8n URL first
-- Check n8n execution logs
-- Verify Cloudflare Worker logs
+### Date Filter Not Working?
 
-### Dashboard Not Loading?
-
-**Check:**
-1. n8n workflow is Active
-2. Webhook path is `/dashboard`
-3. Content-Type header is set correctly
-4. HTML is not escaped in Code node
-
-### Styling Issues?
-
-**Check:**
-- Content-Type header: `text/html; charset=utf-8`
-- No HTML escaping in Code node
-- Browser cache (hard refresh: Cmd+Shift+R)
-
----
-
-## Dashboard Features ✅
-
-### Current Features (UI Complete):
-- ✅ Flight list with status badges (Pending/Imported)
-- ✅ Filter buttons (All/Pending/Imported)
-- ✅ Flight details (route, date, time, aircraft)
-- ✅ "Import to LogTen Pro" buttons
-- ✅ "Sync Now" button
-- ✅ Mobile-responsive design
-- ✅ Professional styling matching landing page
-
-### Pending Features (After Cloudflare Fix):
-- ⏳ OAuth flow through production domain
-- ⏳ Live flight data from FCView API
-- ⏳ User authentication
-- ⏳ Working import to LogTen Pro functionality
-- ⏳ Auto-sync capability
-- ⏳ Settings page
-
----
-
-## Current Status (Oct 21, 2025)
-
-**✅ WORKING:**
-- Landing page deployed
-- Dashboard UI deployed
-- OAuth flow functional (via n8n direct URL)
-- FCView API integration tested and working
-- Token exchange and storage working
-
-**⚠️ ISSUES:**
-- Cloudflare Worker NOT proxying `/webhook/*` correctly
-- OAuth fails when accessed via `flightbridge.app`
-- Minor Supabase duplicate key constraint
-
-**🔧 NEXT ACTION:**
-Fix Cloudflare Worker in dashboard to proxy all webhook requests to n8n.
+**After Calendar Implementation**:
+1. Check date format (YYYY-MM-DD)
+2. Verify filter function logic
+3. Test edge cases (same day, empty dates)
 
 ---
 
@@ -334,6 +506,30 @@ Fix Cloudflare Worker in dashboard to proxy all webhook requests to n8n.
 
 ---
 
+## Next Sprint Goals
+
+### This Week:
+- [ ] Test INSERT/UPDATE/SKIP with new flights
+- [ ] Implement pilot_flying dropdown validation
+- [ ] Add PIC/SIC to More Details section
+- [ ] Replace date dropdown with calendar picker
+- [ ] Add date range filter
+
+### Next Week:
+- [ ] Implement mass import feature
+- [ ] Comprehensive sync button testing
+- [ ] Performance optimization
+- [ ] Error handling improvements
+
+### This Month:
+- [ ] Stripe payment integration
+- [ ] Auto-sync scheduling (daily)
+- [ ] Email notifications
+- [ ] Settings page
+- [ ] Beta user testing
+
+---
+
 ## Support
 
 **GitHub Issues**: https://github.com/flightbridge/flightbridge/issues  
@@ -347,17 +543,19 @@ Fix Cloudflare Worker in dashboard to proxy all webhook requests to n8n.
 **Live URLs:**
 - Landing Page: https://flightbridge.app/
 - Dashboard: https://flightbridge.app/webhook/dashboard
-- OAuth (broken via CF): https://flightbridge.app/webhook/oauth/start
-- OAuth (working direct): https://kbarbershop.app.n8n.cloud/webhook/oauth/start
+- OAuth Start: https://flightbridge.app/webhook/oauth/start
+- Login: https://flightbridge.app/webhook/login
 
 **Development:**
 - GitHub Repo: https://github.com/flightbridge/flightbridge
 - n8n Cloud: https://app.n8n.cloud
 - Cloudflare Dashboard: https://dash.cloudflare.com
+- Supabase: https://supabase.com/dashboard
 
 **API Resources:**
 - FCView API Docs: https://help.flightcrewview.com/support/solutions/articles/16000189645
-- FCView API Portal: https://flightcrewview2.com/logbook/logbookapiclientportal
+- FCView Client Portal: https://flightcrewview2.com/logbook/logbookapiclientportal
+- LogTen Pro URL Scheme: See `logten pro api doc`
 
 ---
 
