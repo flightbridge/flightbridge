@@ -85,6 +85,13 @@
 - Progress indicator during import
 - Validate pilot_flying for all flights before proceeding
 
+**5. Day/Night Takeoff & Landing Calculation**
+- Implement civil twilight calculation for takeoff and landing
+- Add airport coordinates database
+- Calculate day/night T/O and day/night LDG per FAA regulations
+- Store in database: `day_takeoff`, `night_takeoff`, `day_landing`, `night_landing`
+- Display in dashboard and LogTen Pro export
+
 ### 📋 **TODO - Future:**
 - Timezone correction logic verification
 - Auto-sync scheduling (daily 6am)
@@ -92,6 +99,291 @@
 - Stripe payment integration ($9.99/month)
 - Email notifications
 - Beta user testing
+
+---
+
+## 🌙 Day/Night Takeoff & Landing Calculation
+
+### **FAA Regulatory Framework**
+
+FlightBridge calculates day and night takeoffs/landings according to FAA regulations:
+
+#### **FAR 1.1 - Night Flight Time Definition**
+- **Period:** Between end of evening civil twilight and beginning of morning civil twilight
+- **Civil Twilight:** Sun's center is **6° below horizon**
+- **Duration:** Typically 20-35 minutes after sunset / before sunrise (varies by location/season)
+- **Purpose:** For logging night flight hours toward certificates and ratings
+
+#### **FAR 61.57(b) - Night Passenger Currency**
+- **Period:** 1 hour after sunset to 1 hour before sunrise
+- **Purpose:** Passenger-carrying currency requirements (3 T/O and 3 full-stop landings in preceding 90 days)
+- **Note:** More restrictive than FAR 1.1 definition
+
+#### **FAR 91.209 - Aircraft Lighting**
+- **Period:** Sunset to sunrise
+- **Requirement:** Position lights and anti-collision lights must be on
+- **Note:** Least restrictive of all three definitions
+
+**For FlightBridge:** We use **FAR 1.1 civil twilight definition** for logging purposes, as this is the industry standard used by LogTen Pro, MyFlightbook, and CrewLounge PILOTLOG.
+
+---
+
+### **Calculation Logic**
+
+#### **Required Data:**
+1. ✅ Departure airport ICAO code (from FCView)
+2. ✅ Arrival airport ICAO code (from FCView)
+3. ✅ Actual takeoff time UTC (from FCView)
+4. ✅ Actual landing time UTC (from FCView)
+5. ✅ Flight date (from FCView)
+6. ✅ Pilot Flying status (user input)
+7. ❌ Airport coordinates (lat/long) - **TO BE ADDED**
+8. ❌ Civil twilight calculation - **TO BE IMPLEMENTED**
+
+#### **Business Rules:**
+
+**Day Takeoff:**
+- Takeoff occurs **BEFORE** end of evening civil twilight at **departure airport**
+
+**Night Takeoff:**
+- Takeoff occurs **AFTER** end of evening civil twilight at **departure airport**
+
+**Day Landing:**
+- Landing occurs **AFTER** beginning of morning civil twilight at **arrival airport**
+
+**Night Landing:**
+- Landing occurs **BEFORE** beginning of morning civil twilight at **arrival airport**
+
+**Critical:** Only **Pilot Flying (PF)** logs takeoffs and landings. Pilot Monitoring (PM) receives 0 for all T/O and LDG fields.
+
+---
+
+### **Implementation Requirements**
+
+#### **1. Airport Coordinates Database**
+Need latitude/longitude for each airport to calculate civil twilight times.
+
+**Data Sources (Free):**
+- OurAirports.com - Open data, comprehensive
+- OpenFlights.org - Airport database with coordinates
+- AirNav.com - API or web scraping option
+
+**Database Schema Addition:**
+```sql
+CREATE TABLE airports (
+  icao_code VARCHAR(10) PRIMARY KEY,
+  iata_code VARCHAR(10),
+  name VARCHAR(255),
+  latitude DECIMAL(10, 6),
+  longitude DECIMAL(10, 6),
+  timezone VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_icao ON airports(icao_code);
+CREATE INDEX idx_iata ON airports(iata_code);
+```
+
+**Storage Size:** ~50-100MB for worldwide airports (~11,000 airports)
+
+---
+
+#### **2. Civil Twilight Calculator**
+
+**Option A: SunCalc Library (RECOMMENDED)**
+- JavaScript library for astronomical calculations
+- Based on Astronomy Answers formulae
+- Offline-capable, no API dependencies
+- Free and open-source
+- Used by aviation apps
+- GitHub: https://github.com/mourner/suncalc
+
+**Option B: NOAA Solar Calculator**
+- Official U.S. government source
+- Web-based: https://gml.noaa.gov/grad/solcalc/
+- Requires web scraping or API integration
+- Highly accurate
+
+**Option C: Custom Algorithm**
+- Implement astronomical formulas directly
+- Based on Explanatory Supplement to the Astronomical Almanac
+- Full control, no dependencies
+
+**Recommendation:** Use **SunCalc library** for reliability, accuracy, and ease of implementation.
+
+---
+
+#### **3. Calculation Workflow**
+
+```javascript
+// Pseudocode for day/night calculation
+
+function calculateDayNightTakeoffLanding(flight) {
+  // Only calculate if Pilot Flying
+  if (flight.pilot_flying !== 'Y') {
+    return {
+      day_takeoff: 0,
+      night_takeoff: 0,
+      day_landing: 0,
+      night_landing: 0
+    };
+  }
+  
+  // Get airport coordinates
+  const depAirport = getAirportCoordinates(flight.dep_icao_code);
+  const arrAirport = getAirportCoordinates(flight.arr_icao_code);
+  
+  // Calculate civil twilight for departure airport
+  const depTwilight = calculateCivilTwilight(
+    depAirport.latitude,
+    depAirport.longitude,
+    flight.actual_out_local_utc
+  );
+  
+  // Calculate civil twilight for arrival airport
+  const arrTwilight = calculateCivilTwilight(
+    arrAirport.latitude,
+    arrAirport.longitude,
+    flight.actual_in_local_utc
+  );
+  
+  // Determine takeoff day/night
+  const dayTakeoff = flight.actual_out_local_utc < depTwilight.eveningEnd ? 1 : 0;
+  const nightTakeoff = flight.actual_out_local_utc >= depTwilight.eveningEnd ? 1 : 0;
+  
+  // Determine landing day/night
+  const dayLanding = flight.actual_in_local_utc >= arrTwilight.morningBegin ? 1 : 0;
+  const nightLanding = flight.actual_in_local_utc < arrTwilight.morningBegin ? 1 : 0;
+  
+  return {
+    day_takeoff: dayTakeoff,
+    night_takeoff: nightTakeoff,
+    day_landing: dayLanding,
+    night_landing: nightLanding
+  };
+}
+```
+
+---
+
+#### **4. Database Schema Updates**
+
+Add day/night fields to `flights` table:
+
+```sql
+ALTER TABLE flights
+ADD COLUMN day_takeoff INTEGER DEFAULT 0,
+ADD COLUMN night_takeoff INTEGER DEFAULT 0,
+ADD COLUMN day_landing INTEGER DEFAULT 0,
+ADD COLUMN night_landing INTEGER DEFAULT 0;
+
+-- Constraint: Each should be 0 or 1
+ALTER TABLE flights
+ADD CONSTRAINT chk_day_takeoff CHECK (day_takeoff IN (0, 1)),
+ADD CONSTRAINT chk_night_takeoff CHECK (night_takeoff IN (0, 1)),
+ADD CONSTRAINT chk_day_landing CHECK (day_landing IN (0, 1)),
+ADD CONSTRAINT chk_night_landing CHECK (night_landing IN (0, 1));
+
+-- Business rule: Either day OR night, never both
+ADD CONSTRAINT chk_takeoff_exclusive CHECK (
+  (day_takeoff = 1 AND night_takeoff = 0) OR
+  (day_takeoff = 0 AND night_takeoff = 1) OR
+  (day_takeoff = 0 AND night_takeoff = 0)
+),
+ADD CONSTRAINT chk_landing_exclusive CHECK (
+  (day_landing = 1 AND night_landing = 0) OR
+  (day_landing = 0 AND night_landing = 1) OR
+  (day_landing = 0 AND night_landing = 0)
+);
+```
+
+---
+
+#### **5. LogTen Pro Export Integration**
+
+LogTen Pro accepts day/night fields in import URL:
+
+```javascript
+// Add to LogTen Pro URL generation
+const logtenData = {
+  // ... existing fields ...
+  day_takeoff: flight.day_takeoff,
+  night_takeoff: flight.night_takeoff,
+  day_landing: flight.day_landing,
+  night_landing: flight.night_landing
+};
+```
+
+---
+
+### **Industry Standards Reference**
+
+Our implementation follows industry-standard practices:
+
+**LogTen Pro:**
+- Auto-calculates night time via `shouldApplyAutoFillTimes` parameter
+- Uses airport coordinates and civil twilight
+- Links T/O-LDG with PF status
+
+**MyFlightbook:**
+- Auto-detection of day/night takeoffs and landings
+- Separates total landings from day/night counts
+- Currency tracking for FAR 61.57(a)/(b)
+
+**CrewLounge PILOTLOG:**
+- 8 different night time calculation methods (by aviation authority)
+- Automatic Takeoff Day/Night and Landing Day/Night calculation
+- Default links T/O-LDG with PF/PM status (configurable)
+- EFB voyage report integration
+
+---
+
+### **Implementation Priority**
+
+**Phase 1: Foundation**
+1. Import airport database with coordinates
+2. Create airports table in Supabase
+3. Add day/night fields to flights table
+
+**Phase 2: Calculation Engine**
+1. Integrate SunCalc library in n8n Code node
+2. Implement civil twilight calculation function
+3. Add airport coordinate lookup
+
+**Phase 3: Business Logic**
+1. Calculate day/night on flight import
+2. Update existing flights retroactively
+3. Apply PF/PM validation
+
+**Phase 4: Testing & Validation**
+1. Compare results with LogTen Pro auto-fill
+2. Test edge cases (polar regions, timezone boundaries)
+3. Validate against FAA twilight calculator
+
+**Phase 5: UI Integration**
+1. Display day/night indicators in dashboard
+2. Show in "More Details" section
+3. Include in LogTen Pro export
+
+---
+
+### **References**
+
+**FAA Regulations:**
+- FAR 1.1: Definitions (Night)
+- FAR 61.57(b): Night currency requirements
+- FAR 91.209: Aircraft lighting requirements
+- AIM: Aeronautical Information Manual definitions
+
+**Calculation Tools:**
+- FAA Civil Twilight Calculator: https://www.faa.gov/about/office_org/headquarters_offices/avs/offices/afx/afs/afs200/afs210/media/twilight.xls
+- NOAA Solar Calculator: https://gml.noaa.gov/grad/solcalc/
+- U.S. Naval Observatory: https://aa.usno.navy.mil
+
+**Aviation Logbook Standards:**
+- LogTen Pro API Documentation
+- MyFlightbook FAQ: Logging landings/takeoffs
+- CrewLounge PILOTLOG Night Time Calculation Guide
 
 ---
 
@@ -183,6 +475,12 @@ CREATE TABLE flights (
   SIC VARCHAR(255),              -- First Officer name
   pilot_flying VARCHAR(1),       -- 'Y' or 'N' (NULL = not set, requires user input)
   
+  -- Day/Night Takeoff & Landing (TO BE IMPLEMENTED)
+  day_takeoff INTEGER DEFAULT 0,     -- 0 or 1
+  night_takeoff INTEGER DEFAULT 0,   -- 0 or 1
+  day_landing INTEGER DEFAULT 0,     -- 0 or 1
+  night_landing INTEGER DEFAULT 0,   -- 0 or 1
+  
   -- Duration
   Block VARCHAR(10),
   flight_duration VARCHAR(10),
@@ -198,6 +496,22 @@ CREATE TABLE flights (
 
 CREATE INDEX idx_user_flights ON flights(user_id, actual_out_local DESC);
 CREATE UNIQUE INDEX idx_fcview_flight_id ON flights(fcview_flight_id);
+```
+
+### **airports table (TO BE CREATED)**
+```sql
+CREATE TABLE airports (
+  icao_code VARCHAR(10) PRIMARY KEY,
+  iata_code VARCHAR(10),
+  name VARCHAR(255),
+  latitude DECIMAL(10, 6) NOT NULL,
+  longitude DECIMAL(10, 6) NOT NULL,
+  timezone VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_icao ON airports(icao_code);
+CREATE INDEX idx_iata ON airports(iata_code);
 ```
 
 ---
@@ -352,6 +666,14 @@ Compares these fields between FCView and Supabase:
 </button>
 ```
 
+**5. Day/Night Indicators (Future):**
+```html
+<div class="day-night-info">
+  <span class="badge">🌅 Day T/O</span>
+  <span class="badge">🌙 Night LDG</span>
+</div>
+```
+
 ---
 
 ## 🧪 Testing Status
@@ -370,6 +692,7 @@ Compares these fields between FCView and Supabase:
 - ⏳ Sync button with multiple changes
 - ⏳ Token refresh after 1 hour expiration
 - ⏳ Mass import feature (not yet built)
+- ⏳ Day/night calculation (not yet implemented)
 
 ### **Known Issues:**
 - None currently
@@ -395,7 +718,17 @@ Compares these fields between FCView and Supabase:
 - [ ] Mass import feature
 - [ ] Test INSERT/UPDATE/SKIP logic
 
-### **Phase 7: Settings & Polish** ⏳
+### **Phase 7: Day/Night Calculation** ⏳ (DOCUMENTED)
+- [ ] Import airport coordinates database
+- [ ] Create airports table in Supabase
+- [ ] Integrate SunCalc library
+- [ ] Implement civil twilight calculation
+- [ ] Add day/night fields to flights table
+- [ ] Calculate on sync workflow
+- [ ] Update LogTen Pro export
+- [ ] Display in dashboard UI
+
+### **Phase 8: Settings & Polish** ⏳
 - [ ] Settings page
 - [ ] Change password
 - [ ] Auto-sync toggle
@@ -403,14 +736,14 @@ Compares these fields between FCView and Supabase:
 - [ ] Delete account option
 - [ ] Email notifications
 
-### **Phase 8: Subscription** ⏳
+### **Phase 9: Subscription** ⏳
 - [ ] Stripe integration
 - [ ] $9.99/month subscription
 - [ ] Trial period management
 - [ ] Payment webhook handling
 - [ ] Subscription status in dashboard
 
-### **Phase 9: Launch** ⏳
+### **Phase 10: Launch** ⏳
 - [ ] Auto-sync scheduling (daily 6am)
 - [ ] Performance optimization
 - [ ] Error logging and monitoring
@@ -493,6 +826,8 @@ Compares these fields between FCView and Supabase:
 - ✅ Sync workflow functional with proper filtering
 - ✅ Dashboard displaying real flight data
 - ✅ LogTen Pro single-flight import working
+- 📋 Documented day/night takeoff and landing calculation
+- 📋 Added FAA regulatory framework reference
 - 📋 Added TODO list for dashboard improvements
 - 📋 Documented pilot_flying field requirement
 - 📋 Planned mass import feature
@@ -511,5 +846,5 @@ Compares these fields between FCView and Supabase:
 ---
 
 **Last Updated:** October 25, 2025  
-**Current Focus:** Dashboard enhancements (pilot flying field, crew info, date filters, mass import)  
-**Next Milestone:** Complete Phase 6 dashboard improvements
+**Current Focus:** Day/night calculation documentation complete; ready for implementation after dashboard enhancements  
+**Next Milestone:** Complete Phase 6 dashboard improvements, then implement Phase 7 day/night calculation
